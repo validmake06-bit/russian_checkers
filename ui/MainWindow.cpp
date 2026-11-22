@@ -886,7 +886,7 @@ void MainWindow::applyTheme(bool dark) {
             QFrame#sidePanel, QFrame#statCard { background: #202a24; border: 1px solid #35443a; border-radius: 20px; }
             QFrame#statHero { background: #202a24; border: 1px solid #3b493f; border-radius: 22px; }
             QLabel#title { color: #f4eadc; font-size: 26px; font-weight: 700; }
-            QLabel#muted { color: #b5c0b6; font-size: 12px; }
+            QLabel#muted { color: #d0d9d1; font-size: 12px; }
             QLabel#userLabel { color: #f4eadc; background: #303c33; border-radius: 10px; padding: 8px 11px; font-size: 12px; }
             QLabel#fieldLabel, QLabel#sectionTitle { color: #c4a27e; font-size: 10px; font-weight: 700; letter-spacing: 1.4px; }
             QLabel#status { background: #2b3830; color: #f3e8d8; border: 1px solid #45564a; border-radius: 12px; padding: 13px; font-size: 14px; font-weight: 600; }
@@ -915,9 +915,9 @@ void MainWindow::applyTheme(bool dark) {
             QToolButton#drawerToggle:pressed { background: #1d2821; }
             QLabel#statLabel { color: #aebcaf; font-size: 10px; font-weight: 700; letter-spacing: 1px; }
             QLabel#statValue { color: #f4eadc; font-size: 25px; font-weight: 750; }
-            QLabel#statHint { color: #9eac9f; font-size: 11px; }
+            QLabel#statHint { color: #c1ccc2; font-size: 11px; }
             QLabel#statHeroTitle { color: #f5eadb; font-size: 18px; font-weight: 700; }
-            QLabel#statHeroText { color: #b6c1b7; font-size: 12px; }
+            QLabel#statHeroText { color: #d0d9d1; font-size: 12px; }
             QToolTip { background: #26342b; color: #f3eadf; border: 1px solid #627365; padding: 6px 9px; border-radius: 7px; }
         )");
     } else {
@@ -933,7 +933,7 @@ void MainWindow::applyTheme(bool dark) {
             QFrame#sidePanel, QFrame#statCard { background: #fffaf3; border: 1px solid #e7ddcf; border-radius: 20px; }
             QFrame#statHero { background: #fffaf3; border: 1px solid #e7ddcf; border-radius: 22px; }
             QLabel#title { color: #352c24; font-size: 26px; font-weight: 700; }
-            QLabel#muted { color: #7d776e; font-size: 12px; }
+            QLabel#muted { color: #62594f; font-size: 12px; }
             QLabel#userLabel { color: #594633; background: #f0e5d7; border-radius: 10px; padding: 8px 11px; font-size: 12px; }
             QLabel#fieldLabel, QLabel#sectionTitle { color: #8b6b4d; font-size: 10px; font-weight: 700; letter-spacing: 1.4px; }
             QLabel#status { background: #f0f3ed; color: #4d5e50; border: 1px solid #dfe6dc; border-radius: 12px; padding: 13px; font-size: 14px; font-weight: 600; }
@@ -962,9 +962,9 @@ void MainWindow::applyTheme(bool dark) {
             QToolButton#drawerToggle:pressed { background: #e5d6c5; }
             QLabel#statLabel { color: #8a7966; font-size: 10px; font-weight: 700; letter-spacing: 1px; }
             QLabel#statValue { color: #352c24; font-size: 25px; font-weight: 750; }
-            QLabel#statHint { color: #858076; font-size: 11px; }
+            QLabel#statHint { color: #655d53; font-size: 11px; }
             QLabel#statHeroTitle { color: #352c24; font-size: 18px; font-weight: 700; }
-            QLabel#statHeroText { color: #77766e; font-size: 12px; }
+            QLabel#statHeroText { color: #62594f; font-size: 12px; }
             QToolTip { background: #fffaf3; color: #3c3026; border: 1px solid #e1d5c5; padding: 6px 9px; border-radius: 7px; }
         )");
     }
@@ -1234,7 +1234,7 @@ void MainWindow::showStatistics() {
         ? QStringLiteral("QFrame { background:#202a2b; border:1px solid #394746; border-radius:16px; }")
         : QStringLiteral("QFrame { background:#f7eee2; border:1px solid #e2d1bb; border-radius:16px; }");
     const QString valueColor = darkTheme_ ? QStringLiteral("#f0dfca") : QStringLiteral("#493323");
-    const QString labelColor = darkTheme_ ? QStringLiteral("#a8b6ad") : QStringLiteral("#7c6955");
+    const QString labelColor = darkTheme_ ? QStringLiteral("#d0d9d1") : QStringLiteral("#65513f");
     auto metric = [&](const QString& caption, const QString& value, const QString& detail = QString()) {
         auto* tile = new QFrame(card);
         tile->setStyleSheet(cardStyle);
@@ -1272,6 +1272,19 @@ void MainWindow::showStatistics() {
                            QStringLiteral("По завершённым партиям")), 1, 1);
     grid->addWidget(metric(QStringLiteral("Сделано ходов"), QString::number(data.totalMoves),
                            QStringLiteral("За всю историю аккаунта")), 1, 2);
+    const QString difficultyName = [&data]() {
+        switch (data.mostPlayedDifficulty) {
+        case 2: return QStringLiteral("Лёгкий");
+        case 4: return QStringLiteral("Средний");
+        case 6: return QStringLiteral("Сложный");
+        case 8: return QStringLiteral("Максимальный");
+        default: return QStringLiteral("Пока нет данных");
+        }
+    }();
+    grid->addWidget(metric(QStringLiteral("Любимая сложность"), difficultyName,
+                           data.mostPlayedDifficultyGames > 0
+                               ? QStringLiteral("Выбиралась %1 раз(а)").arg(data.mostPlayedDifficultyGames)
+                               : QStringLiteral("Сыграйте первую партию")), 2, 0, 1, 3);
     layout->addLayout(grid);
 
     auto* ratePanel = new QFrame(card);
