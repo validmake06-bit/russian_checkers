@@ -37,6 +37,9 @@ private:
     QPointF squareCenter(int square) const;
     int squareAt(const QPointF& point) const;
     void drawPiece(QPainter& painter, const QPointF& center, bool white, bool king, qreal radius) const;
+    void startAnimationSegment();
+    void advanceAnimationSequence();
+    void finishAnimationSequence();
 
     checkers::Board board_;
     checkers::Side sideToMove_{checkers::Side::White};
@@ -56,4 +59,8 @@ private:
     std::array<checkers::Piece, checkers::MaxCaptures> fadingPieces_{};
     int fadingCount_{0};
     qreal captureOpacity_{0.0};
+    checkers::Move animatedMove_{};
+    checkers::Piece movingPiece_{checkers::Piece::Empty};
+    std::array<checkers::Piece, checkers::MaxCaptures> capturedPieces_{};
+    int animationSegment_{0};
 };
