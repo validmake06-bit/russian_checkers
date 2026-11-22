@@ -93,21 +93,21 @@ void BoardWidget::drawPiece(QPainter& painter, const QPointF& center, bool white
     painter.save();
     painter.setRenderHint(QPainter::Antialiasing);
     painter.setPen(Qt::NoPen);
-    painter.setBrush(QColor(18, 24, 20, darkTheme_ ? 95 : 42));
+    painter.setBrush(QColor(35, 22, 14, darkTheme_ ? 110 : 48));
     painter.drawEllipse(center + QPointF(1.5, 3.0), radius, radius);
 
     QRadialGradient gradient(center + QPointF(-radius * .28, -radius * .34), radius * 1.55);
     if (white) {
-        gradient.setColorAt(0.0, QColor("#ffffff"));
-        gradient.setColorAt(0.72, QColor(darkTheme_ ? "#e7e9e5" : "#fdfefd"));
-        gradient.setColorAt(1.0, QColor(darkTheme_ ? "#b8c0b9" : "#d9dfd9"));
+        gradient.setColorAt(0.0, QColor("#fff7e9"));
+        gradient.setColorAt(0.72, QColor(darkTheme_ ? "#ead9c3" : "#fffaf1"));
+        gradient.setColorAt(1.0, QColor(darkTheme_ ? "#c9ad8d" : "#dfc8ab"));
     } else {
-        gradient.setColorAt(0.0, QColor(darkTheme_ ? "#65716b" : "#59645d"));
-        gradient.setColorAt(0.68, QColor("#303a34"));
-        gradient.setColorAt(1.0, QColor("#202923"));
+        gradient.setColorAt(0.0, QColor(darkTheme_ ? "#9a7657" : "#87664b"));
+        gradient.setColorAt(0.68, QColor("#4a3022"));
+        gradient.setColorAt(1.0, QColor("#2b1b13"));
     }
     painter.setBrush(gradient);
-    painter.setPen(QPen(white ? QColor("#cbd2cb") : QColor("#1b241e"), 1.0));
+    painter.setPen(QPen(white ? QColor("#e4cfb4") : QColor("#2b1b13"), 1.0));
     painter.drawEllipse(center, radius, radius);
 
     painter.setBrush(Qt::NoBrush);
@@ -115,7 +115,7 @@ void BoardWidget::drawPiece(QPainter& painter, const QPointF& center, bool white
     painter.drawEllipse(center, radius * .77, radius * .77);
     if (king) {
         painter.setPen(Qt::NoPen);
-        painter.setBrush(darkTheme_ ? QColor("#c4d5c8") : QColor("#718a76"));
+        painter.setBrush(darkTheme_ ? QColor("#c4d5c8") : QColor("#9b6b47"));
         QPolygonF crown;
         crown << center + QPointF(-radius*.42, radius*.15)
               << center + QPointF(-radius*.34, -radius*.24)
@@ -132,35 +132,35 @@ void BoardWidget::drawPiece(QPainter& painter, const QPointF& center, bool white
 }
 void BoardWidget::paintEvent(QPaintEvent*) {
     QPainter p(this); p.setRenderHint(QPainter::Antialiasing);
-    p.fillRect(rect(), darkTheme_ ? QColor("#171b22") : QColor("#f3f4f1"));
+    p.fillRect(rect(), darkTheme_ ? QColor("#241812") : QColor("#f4eadc"));
     const qreal side = qMin(width(), height()) - 42.0, cell = side / 8.0;
     const qreal left = (width() - side) / 2.0, top = (height() - side) / 2.0;
     p.save();
-    p.setPen(QPen(darkTheme_ ? QColor("#39443e") : QColor("#dfe5de"), 1.0));
-    p.setBrush(darkTheme_ ? QColor("#202630") : QColor("#ffffff"));
+    p.setPen(QPen(darkTheme_ ? QColor("#5a3b29") : QColor("#d9c2a5"), 1.0));
+    p.setBrush(darkTheme_ ? QColor("#fff8ec") : QColor("#fff7e9"));
     p.drawRoundedRect(QRectF(left - 8, top - 8, side + 16, side + 16), 9, 9);
     p.restore();
     p.setPen(Qt::NoPen);
     for (int r=0;r<8;++r) for (int c=0;c<8;++c) {
         const QRectF sq(left+c*cell, top+r*cell, cell, cell);
         if (((r+c)&1) != 0) {
-            p.setBrush(darkTheme_ ? QColor("#414d46") : QColor("#aab9ac"));
+            p.setBrush(darkTheme_ ? QColor("#80583b") : QColor("#aab9ac"));
         } else {
-            p.setBrush(darkTheme_ ? QColor("#252d35") : QColor("#e9eee8"));
+            p.setBrush(darkTheme_ ? QColor("#e9d6bd") : QColor("#e9eee8"));
         }
         p.drawRect(sq);
     }
     if (selectedSquare_ >= 0) {
         const QPointF center = squareCenter(selectedSquare_);
-        p.setPen(QPen(darkTheme_ ? QColor("#b7cdbb") : QColor("#718a76"), 3)); p.setBrush(darkTheme_ ? QColor(183,205,187,42) : QColor(113,138,118,38)); p.drawEllipse(center, cell*.43, cell*.43);
+        p.setPen(QPen(darkTheme_ ? QColor("#e1c29d") : QColor("#9b6b47"), 3)); p.setBrush(darkTheme_ ? QColor(196,145,98,55) : QColor(155,107,71,45)); p.drawEllipse(center, cell*.43, cell*.43);
     }
     if (hasLastMove_) {
-        p.setBrush(darkTheme_ ? QColor(183,205,187,65) : QColor(113,138,118,65));
+        p.setBrush(darkTheme_ ? QColor(196,145,98,75) : QColor(155,107,71,75));
         int r,c; Board::toCoordinates(lastMove_.from,r,c); p.drawRect(QRectF(left+c*cell,top+r*cell,cell,cell));
         Board::toCoordinates(lastMove_.to(),r,c); p.drawRect(QRectF(left+c*cell,top+r*cell,cell,cell));
     }
     if (!targets_.empty()) {
-        for (Square s : targets_) { const QPointF center=squareCenter(s); p.setPen(QPen(darkTheme_ ? QColor("#b7cdbb") : QColor("#718a76"),3)); p.setBrush(darkTheme_ ? QColor(183,205,187,55) : QColor(113,138,118,55)); p.drawEllipse(center,cell*.17,cell*.17); }
+        for (Square s : targets_) { const QPointF center=squareCenter(s); p.setPen(QPen(darkTheme_ ? QColor("#e1c29d") : QColor("#9b6b47"),3)); p.setBrush(darkTheme_ ? QColor(196,145,98,65) : QColor(155,107,71,65)); p.drawEllipse(center,cell*.17,cell*.17); }
     }
     for (int i=0;i<PlayableSquares;++i) {
         const Piece piece=board_.at(static_cast<Square>(i)); if(piece==Piece::Empty) continue;
