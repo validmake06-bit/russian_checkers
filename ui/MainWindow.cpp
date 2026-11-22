@@ -506,7 +506,7 @@ MainWindow::MainWindow(Database& database, qint64 userId, QString username, QWid
     gameDrawerScroll_ = drawerScroll;
     root->addWidget(drawerScroll);
     drawerAnimation_ = new QPropertyAnimation(drawerScroll, "maximumWidth", this);
-    drawerAnimation_->setDuration(260);
+    drawerAnimation_->setDuration(310);
     drawerAnimation_->setEasingCurve(QEasingCurve::OutCubic);
     connect(drawerToggle_, &QPushButton::clicked, this, [this] { toggleGameDrawer(); });
     gamePage_ = central;
@@ -906,6 +906,7 @@ void MainWindow::toggleGameDrawer(bool open) {
     drawerAnimation_->setStartValue(gameDrawerScroll_->maximumWidth());
     drawerAnimation_->setEndValue(drawerOpen_ ? 326 : 0);
     drawerAnimation_->start();
+    if (drawerOpen_) animateEntrance(gameDrawerScroll_, this, 0);
 }
 void MainWindow::toggleGameDrawer() {
     toggleGameDrawer(!drawerOpen_);
