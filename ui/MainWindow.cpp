@@ -1669,6 +1669,7 @@ void MainWindow::showReplay(qint64 replayGameId, const QString& gameTitle, QWidg
                 ? moves[static_cast<std::size_t>(previousPly - 1)] : Move{});
             replayBoard->animateMove(moves[static_cast<std::size_t>(ply - 1)],
                                      positions[static_cast<std::size_t>(ply)]);
+            replayBoard->setLastMove(moves[static_cast<std::size_t>(ply - 1)]);
         } else {
             std::vector<Move> legal = positions[static_cast<std::size_t>(ply)].generateMoves(
                 sides[static_cast<std::size_t>(ply)]);
