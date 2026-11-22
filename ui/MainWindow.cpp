@@ -9,10 +9,8 @@
 #include <QVBoxLayout>
 #include <QFrame>
 
-#include <QFuture>
 #include <QtConcurrent/QtConcurrentRun>
 #include <QStatusBar>
-#include <QFont>
 #include <QGraphicsDropShadowEffect>
 #include <QColor>
 #include <QSettings>
@@ -25,8 +23,6 @@
 #include <QStackedWidget>
 #include <QMediaPlayer>
 #include <QAudioOutput>
-#include <QPropertyAnimation>
-#include <QGraphicsOpacityEffect>
 #include <algorithm>
 
 using namespace checkers;
