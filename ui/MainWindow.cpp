@@ -235,6 +235,9 @@ MainWindow::MainWindow(Database& database, qint64 userId, QString username, QWid
     soundVolume_ = settings.value(QStringLiteral("audio/volume"), 0.55).toReal();
     musicEnabled_ = settings.value(QStringLiteral("audio/musicEnabled"), false).toBool();
     musicVolume_ = settings.value(QStringLiteral("audio/musicVolume"), 0.10).toReal();
+    animationsEnabled_ = settings.value(QStringLiteral("game/animationsEnabled"), true).toBool();
+    animationSpeedPercent_ = settings.value(QStringLiteral("game/animationSpeedPercent"), 100).toInt();
+    boardView_->setAnimationSettings(animationsEnabled_, animationSpeedPercent_);
     moveSound_ = new QSoundEffect(this);
     captureSound_ = new QSoundEffect(this);
     victorySound_ = new QSoundEffect(this);
@@ -575,11 +578,18 @@ void MainWindow::openSettings() {
         musicSetting_->setObjectName("settingsMusic");
         musicVolumeSetting_ = new QSlider(Qt::Horizontal, card);
         musicVolumeSetting_->setRange(0, 30);
+        animationSetting_ = new QCheckBox(QStringLiteral("Плавные анимации ходов"), card);
+        animationSetting_->setObjectName("settingsAnimations");
+        animationSpeedSetting_ = new QSlider(Qt::Horizontal, card);
+        animationSpeedSetting_->setRange(50, 150);
+        animationSpeedSetting_->setToolTip(QStringLiteral("50% — медленнее, 150% — быстрее"));
         form->addRow(QStringLiteral("Оформление"), themeSetting_);
         form->addRow(QStringLiteral("Звуковые эффекты"), soundSetting_);
         form->addRow(QStringLiteral("Громкость эффектов"), soundVolumeSetting_);
         form->addRow(QStringLiteral("Музыка"), musicSetting_);
         form->addRow(QStringLiteral("Громкость музыки"), musicVolumeSetting_);
+        form->addRow(QStringLiteral("Анимация"), animationSetting_);
+        form->addRow(QStringLiteral("Скорость анимации"), animationSpeedSetting_);
 
         auto* actions = new QHBoxLayout;
         actions->addStretch(1);
@@ -609,10 +619,15 @@ void MainWindow::openSettings() {
             applySoundSettings(soundSetting_->isChecked(), soundVolumeSetting_->value() / 100.0);
             musicEnabled_ = musicSetting_->isChecked();
             musicVolume_ = musicVolumeSetting_->value() / 100.0;
+            animationsEnabled_ = animationSetting_->isChecked();
+            animationSpeedPercent_ = animationSpeedSetting_->value();
+            boardView_->setAnimationSettings(animationsEnabled_, animationSpeedPercent_);
             if (musicOutput_) musicOutput_->setVolume(musicVolume_);
             if (musicPlayer_) { if (musicEnabled_) musicPlayer_->play(); else musicPlayer_->stop(); }
             QSettings().setValue(QStringLiteral("audio/musicEnabled"), musicEnabled_);
             QSettings().setValue(QStringLiteral("audio/musicVolume"), musicVolume_);
+            QSettings().setValue(QStringLiteral("game/animationsEnabled"), animationsEnabled_);
+            QSettings().setValue(QStringLiteral("game/animationSpeedPercent"), animationSpeedPercent_);
             pages_->setCurrentWidget(pageBeforeSettings_ ? pageBeforeSettings_ : homePage_);
             statusBar()->showMessage(QStringLiteral("Настройки сохранены"), 2600);
         });
@@ -623,6 +638,8 @@ void MainWindow::openSettings() {
     soundVolumeSetting_->setValue(qRound(soundVolume_ * 100.0));
     musicSetting_->setChecked(musicEnabled_);
     musicVolumeSetting_->setValue(qRound(musicVolume_ * 100.0));
+    animationSetting_->setChecked(animationsEnabled_);
+    animationSpeedSetting_->setValue(animationSpeedPercent_);
     pages_->setCurrentWidget(settingsPage_);
 }
 void MainWindow::showHome() {
