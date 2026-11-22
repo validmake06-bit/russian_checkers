@@ -135,19 +135,52 @@ void BoardWidget::paintEvent(QPaintEvent*) {
     p.fillRect(rect(), darkTheme_ ? QColor("#241812") : QColor("#f4eadc"));
     const qreal side = qMin(width(), height()) - 42.0, cell = side / 8.0;
     const qreal left = (width() - side) / 2.0, top = (height() - side) / 2.0;
+    // Layered walnut frame with a restrained inset highlight.
     p.save();
-    p.setPen(QPen(darkTheme_ ? QColor("#5a3b29") : QColor("#d9c2a5"), 1.0));
-    p.setBrush(darkTheme_ ? QColor("#fff8ec") : QColor("#fff7e9"));
-    p.drawRoundedRect(QRectF(left - 8, top - 8, side + 16, side + 16), 9, 9);
-    p.restore();
     p.setPen(Qt::NoPen);
+    p.setBrush(QColor(0, 0, 0, darkTheme_ ? 95 : 35));
+    p.drawRoundedRect(QRectF(left - 11, top - 8, side + 22, side + 22), 16, 16);
+    QLinearGradient frame(left, top - 10, left + side, top + side + 10);
+    if (darkTheme_) {
+        frame.setColorAt(0.0, QColor("#9a704b"));
+        frame.setColorAt(0.45, QColor("#4c3021"));
+        frame.setColorAt(1.0, QColor("#2a1b14"));
+    } else {
+        frame.setColorAt(0.0, QColor("#c5a17d"));
+        frame.setColorAt(0.5, QColor("#8b6243"));
+        frame.setColorAt(1.0, QColor("#60432f"));
+    }
+    p.setBrush(frame);
+    p.setPen(QPen(darkTheme_ ? QColor("#b88b61") : QColor("#d4b28d"), 1.0));
+    p.drawRoundedRect(QRectF(left - 8, top - 8, side + 16, side + 16), 12, 12);
+    p.setPen(QPen(QColor(255, 245, 225, darkTheme_ ? 42 : 90), 1.0));
+    p.setBrush(Qt::NoBrush);
+    p.drawRoundedRect(QRectF(left - 4, top - 4, side + 8, side + 8), 8, 8);
+    p.restore();
+
+    // Individually shaded squares create a subtle, tactile board surface.
     for (int r=0;r<8;++r) for (int c=0;c<8;++c) {
         const QRectF sq(left+c*cell, top+r*cell, cell, cell);
+        QLinearGradient squareGradient(sq.topLeft(), sq.bottomRight());
         if (((r+c)&1) != 0) {
-            p.setBrush(darkTheme_ ? QColor("#80583b") : QColor("#aab9ac"));
+            if (darkTheme_) {
+                squareGradient.setColorAt(0.0, QColor("#8a6242"));
+                squareGradient.setColorAt(1.0, QColor("#65442f"));
+            } else {
+                squareGradient.setColorAt(0.0, QColor("#b7c4b5"));
+                squareGradient.setColorAt(1.0, QColor("#91a18f"));
+            }
         } else {
-            p.setBrush(darkTheme_ ? QColor("#e9d6bd") : QColor("#e9eee8"));
+            if (darkTheme_) {
+                squareGradient.setColorAt(0.0, QColor("#f1e2ce"));
+                squareGradient.setColorAt(1.0, QColor("#d7c0a3"));
+            } else {
+                squareGradient.setColorAt(0.0, QColor("#fffaf0"));
+                squareGradient.setColorAt(1.0, QColor("#e8e9df"));
+            }
         }
+        p.fillRect(sq, squareGradient);
+        p.setPen(QPen(QColor(60, 42, 28, darkTheme_ ? 24 : 18), 0.6));
         p.drawRect(sq);
     }
     if (selectedSquare_ >= 0) {
