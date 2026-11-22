@@ -601,6 +601,7 @@ MainWindow::MainWindow(Database& database, qint64 userId, QString username, QWid
 }
 
 MainWindow::~MainWindow() {
+    if (pageTransition_) pageTransition_->stop();
     if (gameId_ >= 0 && gameResult_ == QStringLiteral("in_progress")) {
         QString ignored;
         database_.finishGame(gameId_, QStringLiteral("abandoned"), &ignored);
