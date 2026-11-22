@@ -21,7 +21,7 @@ BoardWidget::BoardWidget(QWidget* parent) : QWidget(parent) {
             fadingPieces_[0] = capturedPieces_[static_cast<std::size_t>(animationSegment_)];
             captureOpacity_ = 1.0;
             captureAnimation_.stop();
-            captureAnimation_.setDuration(170);
+            captureAnimation_.setDuration(qMax(1, 170 * 100 / animationSpeedPercent_));
             captureAnimation_.start();
         } else {
             advanceAnimationSequence();
@@ -53,6 +53,10 @@ void BoardWidget::setInteractionEnabled(bool enabled) { interactionEnabled_ = en
 void BoardWidget::setLastMove(const Move& move) { lastMove_ = move; hasLastMove_ = move.valid(); update(); }
 void BoardWidget::setSelection(Square square) { selectedSquare_ = square; targets_.clear(); if (square >= 0) for (const auto& move : legalMoves_) if (move.from == square) targets_.push_back(move.to()); update(); }
 void BoardWidget::setDarkTheme(bool dark) { darkTheme_ = dark; update(); }
+void BoardWidget::setAnimationSettings(bool enabled, int speedPercent) {
+    animationsEnabled_ = enabled;
+    animationSpeedPercent_ = std::clamp(speedPercent, 50, 150);
+}
 void BoardWidget::setAnimatedPosition(const QPointF& p) { animatedPosition_ = p; update(); }
 
 QPointF BoardWidget::squareCenter(int square) const {
@@ -197,7 +201,8 @@ void BoardWidget::startAnimationSegment() {
     animatedPosition_ = from;
     animatedSquare_ = animatedMove_.to();
     animation_.stop();
-    animation_.setDuration(animatedMove_.isCapture ? 235 : 210);
+    const int baseDuration = animatedMove_.isCapture ? 235 : 210;
+    animation_.setDuration(qMax(1, baseDuration * 100 / animationSpeedPercent_));
     animation_.setStartValue(from);
     animation_.setEndValue(to);
     update();
@@ -225,6 +230,16 @@ void BoardWidget::finishAnimationSequence() {
 
 void BoardWidget::animateMove(const Move& move, const Board& resultingBoard) {
     const Board before = board_;
+    if (!animationsEnabled_) {
+        board_ = resultingBoard;
+        animating_ = false;
+        animatedSquare_ = -1;
+        fadingCount_ = 0;
+        movingPiece_ = Piece::Empty;
+        update();
+        emit animationFinished();
+        return;
+    }
     movingPiece_ = before.at(move.from);
     if (movingPiece_ == Piece::Empty || !move.valid()) {
         board_ = resultingBoard;
