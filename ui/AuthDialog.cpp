@@ -202,6 +202,10 @@ void AuthDialog::showRegistration() {
     registerUsernameEdit_->setFocus();
 }
 
+void AuthDialog::openLoginPage() {
+    showLogin();
+}
+
 void AuthDialog::showLogin() {
     usernameEdit_->setText(registerUsernameEdit_->text().trimmed());
     passwordEdit_->clear();
