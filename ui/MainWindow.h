@@ -67,6 +67,10 @@ private:
     QSlider* soundVolumeSetting_{};
     QCheckBox* musicSetting_{};
     QSlider* musicVolumeSetting_{};
+    QCheckBox* animationSetting_{};
+    QSlider* animationSpeedSetting_{};
+    bool animationsEnabled_{true};
+    int animationSpeedPercent_{100};
     BoardWidget* boardView_{};
     QLabel* status_{};
     QLabel* stats_{};
