@@ -42,6 +42,17 @@ BoardWidget::BoardWidget(QWidget* parent) : QWidget(parent) {
 }
 
 void BoardWidget::setPosition(const Board& board, Side side, const std::vector<Move>& moves) {
+    // A new authoritative position (for example, starting another game) cancels
+    // any in-flight visual sequence so stale animation frames cannot leak forward.
+    if (animating_) {
+        animation_.stop();
+        captureAnimation_.stop();
+        animating_ = false;
+        animatedSquare_ = -1;
+        fadingCount_ = 0;
+        movingPiece_ = Piece::Empty;
+        captureOpacity_ = 0.0;
+    }
     board_ = board;
     sideToMove_ = side;
     legalMoves_ = moves;
