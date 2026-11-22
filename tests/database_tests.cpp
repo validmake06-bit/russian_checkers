@@ -32,7 +32,7 @@ int main(int argc, char* argv[]) {
         CHECK(database.finishGame(gameId, QStringLiteral("win"), &error));
 
         const QString statistics = database.userStatistics(userId, &error);
-        CHECK(statistics.contains(QStringLiteral("Всего партий: 50")));
+        CHECK(statistics.contains(QStringLiteral("Всего партий: 1")));
 
         UserStatistics metrics;
         CHECK(database.getUserStatistics(userId, &metrics, &error));
@@ -77,6 +77,8 @@ int main(int argc, char* argv[]) {
         CHECK(recentMoves.isEmpty());
         CHECK(database.getUserStatistics(userId, &metrics, &error));
         CHECK(metrics.totalGames == 50);
+        CHECK(metrics.wins == 25);
+        CHECK(metrics.draws == 25);
     }
 
     // Verify that user records and completed game history survive reopening.
@@ -87,8 +89,8 @@ int main(int argc, char* argv[]) {
         CHECK(reopened.authenticate(QStringLiteral("Tester"),
                                     QStringLiteral("correct-horse-battery"), &error) == userId);
         const QString statistics = reopened.userStatistics(userId, &error);
-        CHECK(statistics.contains(QStringLiteral("Всего партий: 1")));
-        CHECK(statistics.contains(QStringLiteral("Победы: 1")));
+        CHECK(statistics.contains(QStringLiteral("Всего партий: 50")));
+        CHECK(statistics.contains(QStringLiteral("Победы: 25")));
     }
 
     std::cout << "All database tests passed.\n";
