@@ -480,6 +480,11 @@ MainWindow::MainWindow(Database& database, qint64 userId, QString username, QWid
     auto* homeCard = new QFrame(homePage_);
     homeCard->setObjectName("homeCard");
     homeCard->setMaximumWidth(560);
+    auto* homeShadow = new QGraphicsDropShadowEffect(homeCard);
+    homeShadow->setBlurRadius(46);
+    homeShadow->setOffset(0, 17);
+    homeShadow->setColor(QColor(20, 14, 9, 74));
+    homeCard->setGraphicsEffect(homeShadow);
     auto* homeCardLayout = new QVBoxLayout(homeCard);
     homeCardLayout->setContentsMargins(48, 36, 48, 34);
     homeCardLayout->setSpacing(13);
@@ -487,6 +492,9 @@ MainWindow::MainWindow(Database& database, qint64 userId, QString username, QWid
     auto* homeBrand = new QLabel(QStringLiteral("RUSSIAN CHECKERS  /  CLASSIC"), homeCard);
     homeBrand->setObjectName("brand");
     homeBrand->setAlignment(Qt::AlignCenter);
+    auto* homeAccent = new QFrame(homeCard);
+    homeAccent->setObjectName("homeAccent");
+    homeAccent->setFixedSize(84, 3);
     auto* homeEmblem = new QLabel(QStringLiteral("♟"), homeCard);
     homeEmblem->setObjectName("homeEmblem");
     homeEmblem->setAlignment(Qt::AlignCenter);
@@ -521,7 +529,8 @@ MainWindow::MainWindow(Database& database, qint64 userId, QString username, QWid
     homeFooter->setAlignment(Qt::AlignCenter);
 
     homeCardLayout->addWidget(homeBrand);
-    homeCardLayout->addSpacing(2);
+    homeCardLayout->addWidget(homeAccent, 0, Qt::AlignHCenter);
+    homeCardLayout->addSpacing(5);
     homeCardLayout->addWidget(homeEmblem);
     homeCardLayout->addWidget(homeTitle);
     homeCardLayout->addWidget(homeSubtitle);
@@ -878,6 +887,7 @@ void MainWindow::applyTheme(bool dark) {
             QMainWindow, QWidget#appBackground { background: #141a16; color: #f2eadf; }
             QWidget#homeBackground { background: transparent; }
             QFrame#homeCard { background: rgba(25,34,29,238); border: 1px solid rgba(213,167,119,115); border-radius: 28px; }
+            QFrame#homeAccent { background: #d5a777; border: 0; border-radius: 1px; }
             QLabel#brand { color: #d1a77d; font-size: 10px; font-weight: 700; letter-spacing: 2px; }
             QLabel#homeEmblem { color: #d5a777; font-size: 68px; }
             QLabel#homeTitle { color: #fff4e7; font-size: 38px; font-weight: 750; }
@@ -925,6 +935,7 @@ void MainWindow::applyTheme(bool dark) {
             QMainWindow, QWidget#appBackground { background: #f3eee6; color: #352c24; }
             QWidget#homeBackground { background: transparent; }
             QFrame#homeCard { background: rgba(255,251,245,242); border: 1px solid rgba(143,104,69,90); border-radius: 28px; }
+            QFrame#homeAccent { background: #9b704e; border: 0; border-radius: 1px; }
             QLabel#brand { color: #8f6748; font-size: 10px; font-weight: 700; letter-spacing: 2px; }
             QLabel#homeEmblem { color: #946b49; font-size: 68px; }
             QLabel#homeTitle { color: #35271d; font-size: 38px; font-weight: 750; }
