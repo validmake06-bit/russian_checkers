@@ -84,6 +84,8 @@ int BoardWidget::squareAt(const QPointF& p) const {
     const qreal cell = side / 8.0;
     const qreal left = (width() - side) / 2.0;
     const qreal top = (height() - side) / 2.0;
+    if (p.x() < left || p.y() < top || p.x() >= left + side || p.y() >= top + side)
+        return -1;
     const int col = int((p.x() - left) / cell), row = int((p.y() - top) / cell);
     if (row < 0 || row >= 8 || col < 0 || col >= 8) return -1;
     return Board::toSquare(row, col);
