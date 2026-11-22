@@ -10,6 +10,8 @@
 #include <QStackedWidget>
 #include <QVBoxLayout>
 #include <QColor>
+#include <QPropertyAnimation>
+#include <QGraphicsOpacityEffect>
 
 namespace {
 QFrame* makeCard(QWidget* parent) {
@@ -193,12 +195,52 @@ void AuthDialog::setMessage(QLabel* label, const QString& text, bool success) {
     label->setText(text);
 }
 
+void AuthDialog::switchFormPage(int index) {
+    if (!pages_ || index < 0 || index >= pages_->count()) return;
+    if (pageAnimation_) {
+        pageAnimation_->stop();
+        if (transitionPage_ && transitionPage_->graphicsEffect() == pageEffect_)
+            transitionPage_->setGraphicsEffect(nullptr);
+        pageAnimation_->deleteLater();
+        pageAnimation_ = nullptr;
+        transitionPage_ = nullptr;
+        pageEffect_ = nullptr;
+    }
+    if (pages_->currentIndex() == index) return;
+
+    QWidget* target = pages_->widget(index);
+    auto* effect = new QGraphicsOpacityEffect(target);
+    effect->setOpacity(0.0);
+    target->setGraphicsEffect(effect);
+    pages_->setCurrentIndex(index);
+
+    auto* animation = new QPropertyAnimation(effect, "opacity", this);
+    animation->setDuration(180);
+    animation->setStartValue(0.0);
+    animation->setEndValue(1.0);
+    animation->setEasingCurve(QEasingCurve::OutCubic);
+    pageAnimation_ = animation;
+    transitionPage_ = target;
+    pageEffect_ = effect;
+    connect(animation, &QPropertyAnimation::finished, this, [this, animation, target, effect] {
+        if (target && target->graphicsEffect() == effect)
+            target->setGraphicsEffect(nullptr);
+        if (pageAnimation_ == animation) {
+            pageAnimation_ = nullptr;
+            transitionPage_ = nullptr;
+            pageEffect_ = nullptr;
+        }
+        animation->deleteLater();
+    });
+    animation->start();
+}
+
 void AuthDialog::showRegistration() {
     registerUsernameEdit_->setText(usernameEdit_->text().trimmed());
     registerPasswordEdit_->clear();
     confirmPasswordEdit_->clear();
     registerMessage_->clear();
-    pages_->setCurrentIndex(1);
+    switchFormPage(1);
     registerUsernameEdit_->setFocus();
 }
 
@@ -210,7 +252,7 @@ void AuthDialog::showLogin() {
     usernameEdit_->setText(registerUsernameEdit_->text().trimmed());
     passwordEdit_->clear();
     loginMessage_->clear();
-    pages_->setCurrentIndex(0);
+    switchFormPage(0);
     usernameEdit_->setFocus();
 }
 
