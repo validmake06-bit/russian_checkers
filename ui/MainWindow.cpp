@@ -17,8 +17,6 @@
 #include <QColor>
 #include <QSettings>
 #include <QSoundEffect>
-#include <QDialog>
-#include <QDialogButtonBox>
 #include <QCheckBox>
 #include <QSlider>
 #include <QFormLayout>
