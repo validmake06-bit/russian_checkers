@@ -37,6 +37,9 @@
 #include <QPainter>
 #include <QTimer>
 #include <QProgressBar>
+#include <QFontDatabase>
+#include <QApplication>
+#include <QGraphicsOpacityEffect>
 #include <algorithm>
 #include <cmath>
 
@@ -236,6 +239,17 @@ private:
 MainWindow::MainWindow(Database& database, qint64 userId, QString username, QWidget* parent)
     : QMainWindow(parent), database_(database), userId_(userId), username_(std::move(username)) {
     setWindowTitle(QStringLiteral("Русские шашки — против компьютера"));
+    QFontDatabase fontDatabase;
+    const QStringList installedFonts = fontDatabase.families();
+    QString selectedFont = QStringLiteral("Segoe UI");
+    for (const QString& candidate : {QStringLiteral("Inter"), QStringLiteral("Segoe UI Variable"),
+                                     QStringLiteral("Aptos"), QStringLiteral("Segoe UI"),
+                                     QStringLiteral("Noto Sans")}) {
+        if (installedFonts.contains(candidate, Qt::CaseInsensitive)) { selectedFont = candidate; break; }
+    }
+    QFont applicationFont(selectedFont);
+    applicationFont.setPointSize(10);
+    QApplication::setFont(applicationFont);
     resize(1240, 820);
     setMinimumSize(980, 680);
 
@@ -466,7 +480,7 @@ MainWindow::MainWindow(Database& database, qint64 userId, QString username, QWid
             ? QStringLiteral("Вы вошли как  ·  Гость")
             : QStringLiteral("Вы вошли как  ·  %1").arg(username_));
         if (homeLogin_) homeLogin_->setVisible(userId_ < 0);
-        pages_->setCurrentWidget(homePage_);
+        navigateToPage(homePage_);
         statusBar()->showMessage(QStringLiteral("Добро пожаловать, %1").arg(username_), 3000);
     });
     setCentralWidget(pages_);
@@ -484,13 +498,13 @@ MainWindow::MainWindow(Database& database, qint64 userId, QString username, QWid
         showHome();
     });
     connect(homeStart_, &QPushButton::clicked, this, [this] {
-        pages_->setCurrentWidget(gamePage_);
+        navigateToPage(gamePage_);
         if (gameId_ < 0 || gameResult_ != QStringLiteral("in_progress")) startNewGame();
         else refresh();
     });
     connect(homeLogin_, &QPushButton::clicked, this, [this] {
         authPage_->openLoginPage();
-        pages_->setCurrentWidget(authPage_);
+        navigateToPage(authPage_);
     });
     connect(homeStats, &QPushButton::clicked, this, &MainWindow::showStatistics);
     connect(homeSettings, &QPushButton::clicked, this, &MainWindow::openSettings);
@@ -713,6 +727,42 @@ void MainWindow::onAiFinished() {
     stats_->setText(QString("Глубина: %1\nУзлы: %2\nВремя: %3 мс\nСкорость: %4 уз/с")
         .arg(result.completedDepth).arg(result.nodes+result.qnodes).arg(result.elapsedMs).arg(result.nodesPerSecond));
     finishMove(result.bestMove,true);
+}
+
+void MainWindow::navigateToPage(QWidget* page) {
+    if (!page || !pages_) return;
+    if (pageTransition_) {
+        pageTransition_->stop();
+        if (transitionTarget_ && transitionTarget_->graphicsEffect() == transitionEffect_)
+            transitionTarget_->setGraphicsEffect(nullptr);
+        pageTransition_->deleteLater();
+        pageTransition_ = nullptr;
+        transitionTarget_ = nullptr;
+        transitionEffect_ = nullptr;
+    }
+    if (pages_->currentWidget() == page) return;
+    auto* effect = new QGraphicsOpacityEffect(page);
+    effect->setOpacity(0.0);
+    page->setGraphicsEffect(effect);
+    pages_->setCurrentWidget(page);
+    auto* animation = new QPropertyAnimation(effect, "opacity", this);
+    animation->setDuration(220);
+    animation->setStartValue(0.0);
+    animation->setEndValue(1.0);
+    animation->setEasingCurve(QEasingCurve::OutCubic);
+    pageTransition_ = animation;
+    transitionTarget_ = page;
+    transitionEffect_ = effect;
+    connect(animation, &QPropertyAnimation::finished, this, [this, animation, page, effect] {
+        if (page && page->graphicsEffect() == effect) page->setGraphicsEffect(nullptr);
+        if (pageTransition_ == animation) {
+            pageTransition_ = nullptr;
+            transitionTarget_ = nullptr;
+            transitionEffect_ = nullptr;
+        }
+        animation->deleteLater();
+    });
+    animation->start();
 }
 
 void MainWindow::toggleTheme() {
@@ -949,7 +999,7 @@ void MainWindow::openSettings() {
         addButtonFeedback(back, buttonSound_);
         addButtonFeedback(save, buttonSound_);
         connect(back, &QPushButton::clicked, this, [this] {
-            pages_->setCurrentWidget(pageBeforeSettings_ ? pageBeforeSettings_ : homePage_);
+            navigateToPage(pageBeforeSettings_ ? pageBeforeSettings_ : homePage_);
         });
         connect(save, &QPushButton::clicked, this, [this] {
             applyTheme(themeSetting_->currentData().toBool());
@@ -965,7 +1015,7 @@ void MainWindow::openSettings() {
             QSettings().setValue(QStringLiteral("audio/musicVolume"), musicVolume_);
             QSettings().setValue(QStringLiteral("game/animationsEnabled"), animationsEnabled_);
             QSettings().setValue(QStringLiteral("game/animationSpeedPercent"), animationSpeedPercent_);
-            pages_->setCurrentWidget(pageBeforeSettings_ ? pageBeforeSettings_ : homePage_);
+            navigateToPage(pageBeforeSettings_ ? pageBeforeSettings_ : homePage_);
             statusBar()->showMessage(QStringLiteral("Настройки сохранены"), 2600);
         });
     }
@@ -977,7 +1027,7 @@ void MainWindow::openSettings() {
     musicVolumeSetting_->setValue(qRound(musicVolume_ * 100.0));
     animationSetting_->setChecked(animationsEnabled_);
     animationSpeedSetting_->setValue(animationSpeedPercent_);
-    pages_->setCurrentWidget(settingsPage_);
+    navigateToPage(settingsPage_);
 }
 void MainWindow::showHome() {
     if (aiThinking_) return;
@@ -1045,7 +1095,7 @@ void MainWindow::showInlinePrompt(const QString& title, const QString& message,
     outer->addWidget(card, 0, Qt::AlignHCenter);
     outer->addStretch(1);
     pages_->addWidget(messagePage_);
-    pages_->setCurrentWidget(messagePage_);
+    navigateToPage(messagePage_);
 
     auto finish = [this, callback](bool accepted) {
         QWidget* returnPage = messageReturnPage_ ? messageReturnPage_ : homePage_;
@@ -1053,7 +1103,7 @@ void MainWindow::showInlinePrompt(const QString& title, const QString& message,
         messagePage_ = nullptr;
         messageReturnPage_ = nullptr;
         if (page) {
-            pages_->setCurrentWidget(returnPage);
+            navigateToPage(returnPage);
             pages_->removeWidget(page);
             page->deleteLater();
         }
@@ -1179,7 +1229,7 @@ void MainWindow::showStatistics() {
     pages_->addWidget(page);
     pages_->setCurrentWidget(page);
     connect(back, &QPushButton::clicked, this, [this, page] {
-        pages_->setCurrentWidget(homePage_);
+        navigateToPage(homePage_);
         pages_->removeWidget(page);
         page->deleteLater();
     });
