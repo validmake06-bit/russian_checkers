@@ -5,6 +5,7 @@
 #include <QLabel>
 #include <QListWidget>
 #include <QTextEdit>
+#include <QDateTime>
 #include <QPushButton>
 #include <QToolButton>
 #include <QHBoxLayout>
@@ -1269,7 +1270,6 @@ void MainWindow::showStatistics() {
     page->setObjectName("appBackground");
     auto* outer = new QVBoxLayout(page);
     outer->setContentsMargins(34, 28, 34, 28);
-    outer->addStretch(1);
 
     auto* card = new QFrame(page);
     card->setObjectName("sidePanel");
@@ -1409,8 +1409,8 @@ void MainWindow::showStatistics() {
                 .toString(QStringLiteral("dd.MM.yyyy  HH:mm"));
             auto* item = new QListWidgetItem(
                 QStringLiteral("%1   ·   %2\n%3  ·  %4 ходов")
-                    .arg(dateLabel.isEmpty() ? game.startedAt : dateLabel, resultLabel,
-                         difficultyLabel, QString::number(game.moveCount)), recentList);
+                    .arg(dateLabel.isEmpty() ? game.startedAt : dateLabel)
+                    .arg(resultLabel).arg(difficultyLabel).arg(game.moveCount), recentList);
             item->setData(Qt::UserRole, game.id);
             item->setToolTip(QStringLiteral("Партия №%1").arg(game.id));
         }
