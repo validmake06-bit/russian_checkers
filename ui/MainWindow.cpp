@@ -198,8 +198,7 @@ MainWindow::MainWindow(Database& database, qint64 userId, QString username, QWid
 
     auto* panel = new QFrame(central);
     panel->setObjectName("sidePanel");
-    panel->setMinimumWidth(0);
-    panel->setMaximumWidth(0);
+    panel->setFixedWidth(326);
     panel->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
     gameDrawer_ = panel;
     auto* panelShadow = new QGraphicsDropShadowEffect(panel);
