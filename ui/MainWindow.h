@@ -2,6 +2,8 @@
 #include "BoardWidget.h"
 #include "AI.h"
 #include <QMainWindow>
+class QCheckBox;
+class QSlider;
 #include <QFutureWatcher>
 #include <QStringList>
 #include <memory>
@@ -47,6 +49,13 @@ private:
     QStackedWidget* pages_{};
     QWidget* homePage_{};
     QWidget* gamePage_{};
+    QWidget* settingsPage_{};
+    QWidget* pageBeforeSettings_{};
+    QComboBox* themeSetting_{};
+    QCheckBox* soundSetting_{};
+    QSlider* soundVolumeSetting_{};
+    QCheckBox* musicSetting_{};
+    QSlider* musicVolumeSetting_{};
     BoardWidget* boardView_{};
     QLabel* status_{};
     QLabel* stats_{};
