@@ -295,6 +295,22 @@ private:
     int currentPercent_{0};
     bool dark_{true};
 };
+
+QString formatPlayTime(qint64 seconds, bool detailed = false) {
+    seconds = qMax<qint64>(0, seconds);
+    if (seconds < 60)
+        return detailed ? QStringLiteral("%1 сек").arg(seconds)
+                        : (seconds == 0 ? QStringLiteral("0 мин") : QStringLiteral("меньше минуты"));
+    const qint64 minutes = seconds / 60;
+    const qint64 hours = minutes / 60;
+    if (hours >= 24)
+        return QStringLiteral("%1 д %2 ч").arg(hours / 24).arg(hours % 24);
+    if (hours > 0)
+        return QStringLiteral("%1 ч %2 мин").arg(hours).arg(minutes % 60);
+    if (detailed)
+        return QStringLiteral("%1 мин %2 сек").arg(minutes).arg(seconds % 60, 2, 10, QLatin1Char('0'));
+    return QStringLiteral("%1 мин").arg(minutes);
+}
 } // namespace
 
 MainWindow::MainWindow(Database& database, qint64 userId, QString username, QWidget* parent)
@@ -1244,21 +1260,15 @@ void MainWindow::showStatistics() {
     grid->setHorizontalSpacing(12);
     grid->setVerticalSpacing(12);
     const qint64 completed = data.wins + data.losses + data.draws;
-    const qint64 hours = data.totalPlaySeconds / 3600;
-    const qint64 minutes = (data.totalPlaySeconds % 3600) / 60;
-    const qint64 avgMinutes = data.averageGameSeconds / 60;
-    const qint64 avgSeconds = data.averageGameSeconds % 60;
     grid->addWidget(metric(QStringLiteral("Процент побед"), QStringLiteral("%1%").arg(data.winRatePercent),
                            QStringLiteral("От завершённых партий")), 0, 0);
     grid->addWidget(metric(QStringLiteral("Всего партий"), QString::number(data.totalGames),
                            QStringLiteral("%1 завершено · %2 прервано").arg(completed).arg(data.abandoned)), 0, 1);
     grid->addWidget(metric(QStringLiteral("Победы"), QString::number(data.wins),
                            QStringLiteral("%1 поражений · %2 ничьих").arg(data.losses).arg(data.draws)), 0, 2);
-    grid->addWidget(metric(QStringLiteral("Время в игре"),
-                           QStringLiteral("%1 ч %2 мин").arg(hours).arg(minutes, 2, 10, QLatin1Char('0')),
+    grid->addWidget(metric(QStringLiteral("Время в игре"), formatPlayTime(data.totalPlaySeconds),
                            QStringLiteral("Суммарное игровое время")), 1, 0);
-    grid->addWidget(metric(QStringLiteral("Средняя партия"),
-                           QStringLiteral("%1 мин %2 сек").arg(avgMinutes).arg(avgSeconds, 2, 10, QLatin1Char('0')),
+    grid->addWidget(metric(QStringLiteral("Средняя партия"), formatPlayTime(data.averageGameSeconds, true),
                            QStringLiteral("По завершённым партиям")), 1, 1);
     grid->addWidget(metric(QStringLiteral("Сделано ходов"), QString::number(data.totalMoves),
                            QStringLiteral("За всю историю аккаунта")), 1, 2);
