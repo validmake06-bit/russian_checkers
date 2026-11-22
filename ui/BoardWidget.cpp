@@ -152,14 +152,23 @@ void BoardWidget::paintEvent(QPaintEvent*) {
         if (animating_ && i==animatedSquare_) continue;
         drawPiece(p,squareCenter(i),isWhite(piece),isKing(piece),cell*.37);
     }
+    if (animating_ && animatedMove_.isCapture) {
+        // Captured pieces stay on the board until the moving checker reaches them.
+        // Each one then fades independently before the next jump begins.
+        for (int i = animationSegment_; i < animatedMove_.length; ++i) {
+            if (i == animationSegment_ && fadingCount_ > 0) continue;
+            const Piece captured = capturedPieces_[static_cast<std::size_t>(i)];
+            if (captured != Piece::Empty)
+                drawPiece(p, squareCenter(animatedMove_.captured[static_cast<std::size_t>(i)]),
+                          isWhite(captured), isKing(captured), cell*.37);
+        }
+    }
     if (animating_ && fadingCount_ > 0 && captureOpacity_ > 0.0) {
         p.save();
         p.setOpacity(captureOpacity_);
-        for (int i = 0; i < fadingCount_; ++i) {
-            const Piece captured = fadingPieces_[static_cast<std::size_t>(i)];
-            if (captured != Piece::Empty)
-                drawPiece(p, squareCenter(fadingSquares_[static_cast<std::size_t>(i)]), isWhite(captured), isKing(captured), cell*.37);
-        }
+        const Piece captured = fadingPieces_[0];
+        if (captured != Piece::Empty)
+            drawPiece(p, squareCenter(fadingSquares_[0]), isWhite(captured), isKing(captured), cell*.37);
         p.restore();
     }
     if (animating_ && animatedSquare_>=0) {
