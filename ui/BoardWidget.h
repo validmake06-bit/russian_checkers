@@ -58,6 +58,10 @@ private:
     QPointF animatedPosition_;
     QVariantAnimation animation_;
     QVariantAnimation captureAnimation_;
+    QVariantAnimation landingAnimation_;
+    qreal landingScale_{1.0};
+    bool landingPulseRunning_{false};
+    checkers::Piece finalPiece_{checkers::Piece::Empty};
     std::array<checkers::Square, checkers::MaxCaptures> fadingSquares_{};
     std::array<checkers::Piece, checkers::MaxCaptures> fadingPieces_{};
     int fadingCount_{0};
