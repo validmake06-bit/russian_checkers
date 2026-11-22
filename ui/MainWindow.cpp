@@ -11,6 +11,7 @@
 #include <QFrame>
 #include <QGridLayout>
 #include <QScrollArea>
+#include <QScrollBar>
 
 #include <QtConcurrent/QtConcurrentRun>
 #include <QStatusBar>
@@ -256,6 +257,8 @@ MainWindow::MainWindow(Database& database, qint64 userId, QString username, QWid
 
     newGame_ = new QPushButton(QStringLiteral("＋  Новая партия"), panel);
     newGame_->setObjectName("primary");
+    newGame_->setMinimumHeight(48);
+    newGame_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     themeButton_ = new QPushButton(panel);
     themeButton_->setObjectName("secondary");
     soundButton_ = new QPushButton(panel);
@@ -647,6 +650,9 @@ void MainWindow::toggleGameDrawer(bool open) {
     if (!gameDrawerScroll_ || !drawerAnimation_) return;
     if (open == drawerOpen_) return;
     drawerOpen_ = open;
+    // The drawer has hidden scrollbars; always reveal its primary action when reopened.
+    if (drawerOpen_ && gameDrawerScroll_->verticalScrollBar())
+        gameDrawerScroll_->verticalScrollBar()->setValue(0);
     drawerToggle_->setText(drawerOpen_ ? QStringLiteral("×") : QStringLiteral("☰"));
     drawerToggle_->setToolTip(drawerOpen_ ? QStringLiteral("Скрыть меню партии")
                                           : QStringLiteral("Открыть меню партии"));
