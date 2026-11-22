@@ -82,7 +82,7 @@ int main(int argc, char* argv[]) {
         if (credentialAfterReopen != credentialBeforeClose)
             std::cerr << "Credential record changed across reopen. before="
                       << credentialBeforeClose.toStdString() << ", after="
-                      << credentialAfterReopen.toStdString() << '\\n';
+                      << credentialAfterReopen.toStdString() << '\n';
         CHECK(credentialAfterReopen == credentialBeforeClose);
         const qint64 reopenedUserId = reopened.authenticate(
             QStringLiteral("Tester"), QStringLiteral("correct-horse-battery"), &error);
