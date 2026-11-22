@@ -1628,6 +1628,11 @@ void MainWindow::showReplay(qint64 replayGameId, const QString& gameTitle, QWidg
     controls->addWidget(previous, 0, 1);
     controls->addWidget(next, 1, 0);
     controls->addWidget(last, 1, 1);
+    auto* playPause = new QPushButton(QStringLiteral("▶  Воспроизвести"), panel);
+    playPause->setObjectName("primary");
+    playPause->setMinimumHeight(46);
+    auto* replayTimer = new QTimer(page);
+    replayTimer->setInterval(950);
 
     panelLayout->addWidget(gameName);
     panelLayout->addWidget(replayStatus);
@@ -1636,6 +1641,7 @@ void MainWindow::showReplay(qint64 replayGameId, const QString& gameTitle, QWidg
     panelLayout->addWidget(moveDetails);
     panelLayout->addWidget(moveSlider);
     panelLayout->addLayout(controls);
+    panelLayout->addWidget(playPause);
     panelLayout->addStretch(1);
     auto* replayHint = new QLabel(
         QStringLiteral("Используйте кнопки или ползунок, чтобы перемещаться по ходам. Текущая партия не изменяется."),
@@ -1678,7 +1684,33 @@ void MainWindow::showReplay(qint64 replayGameId, const QString& gameTitle, QWidg
         moveSlider->setValue(qMin(moveSlider->maximum(), moveSlider->value() + 1));
     });
     connect(last, &QPushButton::clicked, this, [moveSlider] { moveSlider->setValue(moveSlider->maximum()); });
-    connect(back, &QPushButton::clicked, this, [this, page, returnPage] {
+    connect(playPause, &QPushButton::clicked, this, [playPause, replayTimer, moveSlider] {
+        if (replayTimer->isActive()) {
+            replayTimer->stop();
+            playPause->setText(QStringLiteral("▶  Продолжить"));
+        } else {
+            if (moveSlider->value() >= moveSlider->maximum())
+                moveSlider->setValue(0);
+            if (moveSlider->maximum() > 0) {
+                playPause->setText(QStringLiteral("Ⅱ  Пауза"));
+                replayTimer->start();
+            }
+        }
+    });
+    connect(replayTimer, &QTimer::timeout, this, [replayTimer, moveSlider, playPause] {
+        if (moveSlider->value() >= moveSlider->maximum()) {
+            replayTimer->stop();
+            playPause->setText(QStringLiteral("↻  Повторить"));
+            return;
+        }
+        moveSlider->setValue(moveSlider->value() + 1);
+        if (moveSlider->value() >= moveSlider->maximum()) {
+            replayTimer->stop();
+            playPause->setText(QStringLiteral("↻  Повторить"));
+        }
+    });
+    connect(back, &QPushButton::clicked, this, [this, page, returnPage, replayTimer] {
+        replayTimer->stop();
         navigateToPage(returnPage);
         pages_->removeWidget(page);
         page->deleteLater();
@@ -1688,6 +1720,7 @@ void MainWindow::showReplay(qint64 replayGameId, const QString& gameTitle, QWidg
     addButtonFeedback(previous, buttonSound_);
     addButtonFeedback(next, buttonSound_);
     addButtonFeedback(last, buttonSound_);
+    addButtonFeedback(playPause, buttonSound_);
 
     pages_->addWidget(page);
     navigateToPage(page);
