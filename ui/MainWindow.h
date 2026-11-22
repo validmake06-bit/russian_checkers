@@ -9,6 +9,7 @@ class QSlider;
 #include <memory>
 #include <unordered_map>
 #include <cstdint>
+#include <functional>
 
 class QLabel;
 class QListWidget;
@@ -45,11 +46,17 @@ private:
     QString moveText(const checkers::Move& move) const;
     bool gameOver() const;
     bool drawByRepetition() const;
+    void showInlineMessage(const QString& title, const QString& message);
+    void showInlinePrompt(const QString& title, const QString& message,
+                          const QString& acceptText, const QString& cancelText,
+                          std::function<void(bool)> callback);
 
     QStackedWidget* pages_{};
     QWidget* homePage_{};
     QWidget* gamePage_{};
     QWidget* settingsPage_{};
+    QWidget* messagePage_{};
+    QWidget* messageReturnPage_{};
     QWidget* pageBeforeSettings_{};
     QComboBox* themeSetting_{};
     QCheckBox* soundSetting_{};
@@ -87,6 +94,7 @@ private:
     checkers::Square selected_{-1};
     bool darkTheme_{true};
     bool aiThinking_{false};
+    bool abandonConfirmed_{false};
     QFutureWatcher<checkers::SearchResult> aiWatcher_;
     Database& database_;
     qint64 userId_{-1};
