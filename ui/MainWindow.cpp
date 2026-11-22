@@ -1040,7 +1040,7 @@ void MainWindow::openSettings() {
         musicSetting_->setObjectName("settingsMusic");
         musicVolumeSetting_ = new QSlider(Qt::Horizontal, card);
         musicVolumeSetting_->setRange(0, 30);
-        animationSetting_ = new QCheckBox(QStringLiteral("Плавные анимации ходов"), card);
+        animationSetting_ = new QCheckBox(QStringLiteral("Плавные анимации интерфейса и ходов"), card);
         animationSetting_->setObjectName("settingsAnimations");
         animationSpeedSetting_ = new QSlider(Qt::Horizontal, card);
         animationSpeedSetting_->setRange(50, 150);
