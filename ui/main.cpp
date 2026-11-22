@@ -1,4 +1,3 @@
-#include "AuthDialog.h"
 #include "MainWindow.h"
 #include "../db/Database.h"
 
