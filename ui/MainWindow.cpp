@@ -164,6 +164,43 @@ void addButtonFeedback(QPushButton* button, QSoundEffect* clickSound) {
     });
 }
 
+void animateEntrance(QWidget* widget, QObject* owner, int delayMs) {
+    if (!widget) return;
+    QTimer::singleShot(delayMs, widget, [widget, owner] {
+        // Do not replace an effect already owned by another visual treatment.
+        if (!widget || widget->graphicsEffect()) return;
+        auto* effect = new QGraphicsOpacityEffect(widget);
+        effect->setOpacity(0.0);
+        widget->setGraphicsEffect(effect);
+        auto* animation = new QPropertyAnimation(effect, "opacity", owner);
+        animation->setDuration(280);
+        animation->setStartValue(0.0);
+        animation->setEndValue(1.0);
+        animation->setEasingCurve(QEasingCurve::OutCubic);
+        QObject::connect(animation, &QPropertyAnimation::finished, widget,
+                         [widget, effect] {
+            if (widget && widget->graphicsEffect() == effect)
+                widget->setGraphicsEffect(nullptr);
+        });
+        animation->start(QAbstractAnimation::DeleteWhenStopped);
+    });
+}
+
+void animateHomeEntrance(QWidget* homePage, QObject* owner) {
+    if (!homePage) return;
+    auto* card = homePage->findChild<QFrame*>(QStringLiteral("homeCard"));
+    if (card) {
+        const auto children = card->findChildren<QWidget*>(QString(), Qt::FindDirectChildrenOnly);
+        int delay = 35;
+        for (QWidget* child : children) {
+            animateEntrance(child, owner, delay);
+            delay += 38;
+        }
+    }
+    if (auto* footer = homePage->findChild<QLabel*>(QStringLiteral("homeFooter")))
+        animateEntrance(footer, owner, 180);
+}
+
 class CheckersBackdrop final : public QWidget {
 public:
     explicit CheckersBackdrop(QWidget* parent = nullptr) : QWidget(parent) {
@@ -561,6 +598,7 @@ MainWindow::MainWindow(Database& database, qint64 userId, QString username, QWid
             : QStringLiteral("Вы вошли как  ·  %1").arg(username_));
         if (homeLogin_) homeLogin_->setVisible(userId_ < 0);
         navigateToPage(homePage_);
+        animateHomeEntrance(homePage_, this);
         statusBar()->showMessage(QStringLiteral("Добро пожаловать, %1").arg(username_), 3000);
     });
     setCentralWidget(pages_);
@@ -623,6 +661,7 @@ MainWindow::MainWindow(Database& database, qint64 userId, QString username, QWid
     const auto buttons = findChildren<QPushButton*>();
     for (QPushButton* button : buttons) addButtonFeedback(button, buttonSound_);
     applyTheme(darkTheme_);
+    if (userId_ >= 0) animateHomeEntrance(homePage_, this);
 
     connect(boardView_, &BoardWidget::animationFinished, this, [this] {
         if (aiThinking_ || gameOver()) return;
@@ -1112,6 +1151,7 @@ void MainWindow::showHome() {
     if (homeStart_) homeStart_->setText(!historyMoves_.empty() && gameResult_ == QStringLiteral("in_progress")
         ? QStringLiteral("Продолжить игру") : QStringLiteral("Начать игру"));
     navigateToPage(homePage_);
+    animateHomeEntrance(homePage_, this);
 }
 
 void MainWindow::showInlineMessage(const QString& title, const QString& message) {
