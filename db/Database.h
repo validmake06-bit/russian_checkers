@@ -16,6 +16,8 @@ struct UserStatistics {
     qint64 averageGameSeconds{0};
     qint64 totalMoves{0};
     int winRatePercent{0};
+    int mostPlayedDifficulty{0};
+    qint64 mostPlayedDifficultyGames{0};
 };
 
 class Database final {
