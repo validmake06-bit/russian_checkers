@@ -946,7 +946,7 @@ void MainWindow::applyTheme(bool dark) {
             QLabel#status { background: #2b3830; color: #f3e8d8; border: 1px solid #45564a; border-radius: 12px; padding: 13px; font-size: 14px; font-weight: 600; }
             QLabel#stats { color: #c1cdbf; background: #2b3830; border-radius: 10px; padding: 10px; font-size: 11px; }
             QFrame#separator { color: #3a473e; max-height: 1px; }
-            QComboBox, QListWidget { background: #18211c; color: #f1e8dc; border: 1px solid #3b4a40; border-radius: 10px; padding: 9px 11px; min-height: 22px; selection-background-color: #72543b; }
+            QComboBox, QListWidget, QTextEdit { background: #18211c; color: #f1e8dc; border: 1px solid #3b4a40; border-radius: 10px; padding: 9px 11px; min-height: 22px; selection-background-color: #72543b; }
             QComboBox:hover, QListWidget:hover { border-color: #c49a70; }
             QComboBox::drop-down { border: 0; width: 25px; }
             QComboBox QAbstractItemView { background: #202a24; color: #f1e8dc; selection-background-color: #4b5b4f; border: 1px solid #4a594d; }
@@ -994,7 +994,7 @@ void MainWindow::applyTheme(bool dark) {
             QLabel#status { background: #f0f3ed; color: #4d5e50; border: 1px solid #dfe6dc; border-radius: 12px; padding: 13px; font-size: 14px; font-weight: 600; }
             QLabel#stats { color: #617365; background: #edf1eb; border-radius: 10px; padding: 10px; font-size: 11px; }
             QFrame#separator { color: #e9e0d4; max-height: 1px; }
-            QComboBox, QListWidget { background: #fffdf9; color: #3c3026; border: 1px solid #e4d9ca; border-radius: 10px; padding: 9px 11px; min-height: 22px; selection-background-color: #e9d8c2; }
+            QComboBox, QListWidget, QTextEdit { background: #fffdf9; color: #3c3026; border: 1px solid #e4d9ca; border-radius: 10px; padding: 9px 11px; min-height: 22px; selection-background-color: #e9d8c2; }
             QComboBox:hover, QListWidget:hover { border-color: #b58b66; }
             QComboBox::drop-down { border: 0; width: 25px; }
             QComboBox QAbstractItemView { background: #fffaf3; color: #3c3026; selection-background-color: #eee0ce; border: 1px solid #e4d9ca; }
@@ -1450,8 +1450,14 @@ void MainWindow::showStatistics() {
     back->setMinimumHeight(44);
     actions->addWidget(back);
     layout->addLayout(actions);
-    outer->addWidget(card, 0, Qt::AlignHCenter);
-    outer->addStretch(1);
+    auto* historyScroll = new QScrollArea(page);
+    historyScroll->setWidgetResizable(true);
+    historyScroll->setFrameShape(QFrame::NoFrame);
+    historyScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    historyScroll->setStyleSheet(QStringLiteral("QScrollArea { background: transparent; border: 0; }"));
+    historyScroll->setWidget(card);
+    historyScroll->setMaximumWidth(1020);
+    outer->addWidget(historyScroll, 1, Qt::AlignHCenter);
 
     pages_->addWidget(page);
     navigateToPage(page);
