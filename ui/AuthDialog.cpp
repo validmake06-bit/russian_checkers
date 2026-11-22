@@ -63,7 +63,12 @@ AuthDialog::AuthDialog(Database& database, QWidget* parent)
     pages_ = new QStackedWidget(this);
 
     // Login page
-    auto* loginCard = makeCard(pages_);
+    auto* loginPage = new QWidget(pages_);
+    auto* loginPageLayout = new QVBoxLayout(loginPage);
+    loginPageLayout->setContentsMargins(0, 0, 0, 0);
+    loginPageLayout->addStretch(1);
+    auto* loginCard = makeCard(loginPage);
+    loginCard->setMaximumWidth(480);
     auto* loginLayout = new QVBoxLayout(loginCard);
     loginLayout->setContentsMargins(24, 24, 24, 22);
     loginLayout->setSpacing(13);
@@ -85,10 +90,17 @@ AuthDialog::AuthDialog(Database& database, QWidget* parent)
     loginLayout->addWidget(loginButton);
     loginLayout->addWidget(toRegisterButton);
     loginLayout->addWidget(guestButton);
-    pages_->addWidget(loginCard);
+    loginPageLayout->addWidget(loginCard, 0, Qt::AlignHCenter);
+    loginPageLayout->addStretch(1);
+    pages_->addWidget(loginPage);
 
     // Registration page is intentionally separate from the login form.
-    auto* registerCard = makeCard(pages_);
+    auto* registerPage = new QWidget(pages_);
+    auto* registerPageLayout = new QVBoxLayout(registerPage);
+    registerPageLayout->setContentsMargins(0, 0, 0, 0);
+    registerPageLayout->addStretch(1);
+    auto* registerCard = makeCard(registerPage);
+    registerCard->setMaximumWidth(480);
     auto* registerLayout = new QVBoxLayout(registerCard);
     registerLayout->setContentsMargins(24, 24, 24, 22);
     registerLayout->setSpacing(13);
@@ -110,7 +122,9 @@ AuthDialog::AuthDialog(Database& database, QWidget* parent)
     registerLayout->addWidget(registerMessage_);
     registerLayout->addWidget(createButton);
     registerLayout->addWidget(backButton);
-    pages_->addWidget(registerCard);
+    registerPageLayout->addWidget(registerCard, 0, Qt::AlignHCenter);
+    registerPageLayout->addStretch(1);
+    pages_->addWidget(registerPage);
 
     auto* footer = new QLabel(QStringLiteral("Гостевой режим не требует аккаунта. Прогресс гостя не привязывается к профилю."), this);
     footer->setObjectName("authFooter");
