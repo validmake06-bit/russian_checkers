@@ -710,6 +710,7 @@ void MainWindow::applySoundSettings(bool enabled, qreal volume) {
         if (effect) effect->setVolume(soundVolume_);
     }
     if (buttonSound_) buttonSound_->setVolume(soundVolume_ * 0.42);
+    if (buttonSound_) buttonSound_->setMuted(!soundsEnabled_);
     QSettings settings;
     settings.setValue(QStringLiteral("audio/enabled"), soundsEnabled_);
     settings.setValue(QStringLiteral("audio/volume"), soundVolume_);
