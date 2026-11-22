@@ -72,7 +72,7 @@ void BoardWidget::setAnimatedPosition(const QPointF& p) { animatedPosition_ = p;
 
 QPointF BoardWidget::squareCenter(int square) const {
     int row, col; Board::toCoordinates(static_cast<Square>(square), row, col);
-    const qreal side = qMin(width(), height()) - 42.0;
+    const qreal side = qMin(width(), height()) - 68.0;
     const qreal cell = side / 8.0;
     const qreal left = (width() - side) / 2.0;
     const qreal top = (height() - side) / 2.0;
@@ -80,7 +80,7 @@ QPointF BoardWidget::squareCenter(int square) const {
 }
 
 int BoardWidget::squareAt(const QPointF& p) const {
-    const qreal side = qMin(width(), height()) - 42.0;
+    const qreal side = qMin(width(), height()) - 68.0;
     const qreal cell = side / 8.0;
     const qreal left = (width() - side) / 2.0;
     const qreal top = (height() - side) / 2.0;
@@ -110,9 +110,21 @@ void BoardWidget::drawPiece(QPainter& painter, const QPointF& center, bool white
     painter.setPen(QPen(white ? QColor("#e4cfb4") : QColor("#2b1b13"), 1.0));
     painter.drawEllipse(center, radius, radius);
 
+    // Fine bevels and a soft top reflection give each checker a tactile,
+    // polished finish without relying on platform-specific graphics effects.
     painter.setBrush(Qt::NoBrush);
-    painter.setPen(QPen(white ? QColor(255,255,255,190) : QColor(186,202,188,105), 1.4));
-    painter.drawEllipse(center, radius * .77, radius * .77);
+    painter.setPen(QPen(white ? QColor(255,255,255,205) : QColor(208,177,143,105), 1.35));
+    painter.drawEllipse(center + QPointF(0, -radius * .025), radius * .79, radius * .79);
+    painter.setPen(QPen(white ? QColor(157,126,96,105) : QColor(15,10,7,150), 1.0));
+    painter.drawArc(QRectF(center.x() - radius * .68, center.y() - radius * .68,
+                           radius * 1.36, radius * 1.36), 205 * 16, 145 * 16);
+    QRadialGradient glint(center + QPointF(-radius * .38, -radius * .55), radius * .72);
+    glint.setColorAt(0.0, QColor(255,255,255, white ? 105 : 42));
+    glint.setColorAt(1.0, QColor(255,255,255,0));
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(glint);
+    painter.drawEllipse(center + QPointF(-radius * .18, -radius * .34),
+                        radius * .49, radius * .22);
     if (king) {
         painter.setPen(Qt::NoPen);
         painter.setBrush(darkTheme_ ? QColor("#c4d5c8") : QColor("#9b6b47"));
@@ -133,7 +145,7 @@ void BoardWidget::drawPiece(QPainter& painter, const QPointF& center, bool white
 void BoardWidget::paintEvent(QPaintEvent*) {
     QPainter p(this); p.setRenderHint(QPainter::Antialiasing);
     p.fillRect(rect(), darkTheme_ ? QColor("#241812") : QColor("#f4eadc"));
-    const qreal side = qMin(width(), height()) - 42.0, cell = side / 8.0;
+    const qreal side = qMin(width(), height()) - 68.0, cell = side / 8.0;
     const qreal left = (width() - side) / 2.0, top = (height() - side) / 2.0;
     // Layered walnut frame with a restrained inset highlight.
     p.save();
@@ -183,6 +195,24 @@ void BoardWidget::paintEvent(QPaintEvent*) {
         p.setPen(QPen(QColor(60, 42, 28, darkTheme_ ? 24 : 18), 0.6));
         p.drawRect(sq);
     }
+
+    // Small coordinate marks sit in the board's quiet outer margin. They make
+    // analysis and move discussion easier while keeping the playing surface clean.
+    QFont coordinateFont = p.font();
+    coordinateFont.setPointSize(8);
+    coordinateFont.setWeight(QFont::DemiBold);
+    coordinateFont.setLetterSpacing(QFont::AbsoluteSpacing, 0.7);
+    p.setFont(coordinateFont);
+    p.setPen(darkTheme_ ? QColor("#d9c1a4") : QColor("#80664d"));
+    for (int index = 0; index < 8; ++index) {
+        const QString rank = QString::number(8 - index);
+        const QString file(QChar(QLatin1Char('a').unicode() + index));
+        p.drawText(QRectF(left - 28, top + index * cell, 18, cell),
+                   Qt::AlignCenter, rank);
+        p.drawText(QRectF(left + index * cell, top + side + 10, cell, 18),
+                   Qt::AlignCenter, file);
+    }
+
     if (selectedSquare_ >= 0) {
         const QPointF center = squareCenter(selectedSquare_);
         p.setPen(QPen(darkTheme_ ? QColor("#e1c29d") : QColor("#9b6b47"), 3)); p.setBrush(darkTheme_ ? QColor(196,145,98,55) : QColor(155,107,71,45)); p.drawEllipse(center, cell*.43, cell*.43);
