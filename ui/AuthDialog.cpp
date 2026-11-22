@@ -41,11 +41,9 @@ QPushButton* makeButton(QWidget* parent, const QString& text, const QString& obj
 }
 
 AuthDialog::AuthDialog(Database& database, QWidget* parent)
-    : QDialog(parent), database_(database) {
-    setWindowTitle(QStringLiteral("Русские шашки — аккаунт"));
-    setModal(true);
-    setFixedSize(480, 590);
-    setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
+    : QWidget(parent), database_(database) {
+    setObjectName("authPage");
+    setMinimumWidth(420);
 
     auto* root = new QVBoxLayout(this);
     root->setContentsMargins(30, 26, 30, 26);
@@ -131,7 +129,7 @@ AuthDialog::AuthDialog(Database& database, QWidget* parent)
     const bool dark = QSettings().value(QStringLiteral("appearance/darkTheme"), false).toBool();
     if (dark) {
         setStyleSheet(R"(
-            QDialog { background: #171b22; color: #edf0f3; font-family: "Segoe UI"; }
+            QWidget#authPage { background: #171b22; color: #edf0f3; font-family: "Segoe UI"; }
             QLabel#brand { color: #9eaa9f; font-size: 11px; font-weight: 700; letter-spacing: 2px; }
             QLabel#heroTitle { color: #f3f4f2; font-size: 27px; font-weight: 700; }
             QLabel#heroSubtitle { color: #9da7b3; font-size: 13px; }
@@ -149,7 +147,7 @@ AuthDialog::AuthDialog(Database& database, QWidget* parent)
         )");
     } else {
         setStyleSheet(R"(
-            QDialog { background: #f3f4f1; color: #303832; font-family: "Segoe UI"; }
+            QWidget#authPage { background: #f3f4f1; color: #303832; font-family: "Segoe UI"; }
             QLabel#brand { color: #718276; font-size: 11px; font-weight: 700; letter-spacing: 2px; }
             QLabel#heroTitle { color: #29332d; font-size: 27px; font-weight: 700; }
             QLabel#heroSubtitle { color: #7c877f; font-size: 13px; }
@@ -209,7 +207,7 @@ void AuthDialog::login() {
     if (id < 0) { setMessage(loginMessage_, error.isEmpty() ? QStringLiteral("Не удалось выполнить вход.") : error); return; }
     userId_ = id;
     username_ = name;
-    accept();
+    emit authenticated(userId_, username_);
 }
 
 void AuthDialog::registerAccount() {
