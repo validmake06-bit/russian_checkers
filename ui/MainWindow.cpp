@@ -309,13 +309,14 @@ MainWindow::MainWindow(Database& database, qint64 userId, QString username, QWid
     QFontDatabase fontDatabase;
     const QStringList installedFonts = fontDatabase.families();
     QString selectedFont = QStringLiteral("Segoe UI");
-    for (const QString& candidate : {QStringLiteral("Inter"), QStringLiteral("Segoe UI Variable"),
-                                     QStringLiteral("Aptos"), QStringLiteral("Segoe UI"),
-                                     QStringLiteral("Noto Sans")}) {
+    for (const QString& candidate : {QStringLiteral("Inter"), QStringLiteral("Aptos"), QStringLiteral("Segoe UI Variable"),
+                                     QStringLiteral("Segoe UI"), QStringLiteral("Noto Sans")}) {
         if (installedFonts.contains(candidate, Qt::CaseInsensitive)) { selectedFont = candidate; break; }
     }
     QFont applicationFont(selectedFont);
     applicationFont.setPointSize(10);
+    applicationFont.setStyleHint(QFont::SansSerif);
+    applicationFont.setWeight(QFont::Normal);
     QApplication::setFont(applicationFont);
     resize(1240, 820);
     setMinimumSize(980, 680);
@@ -874,6 +875,14 @@ void MainWindow::applyTheme(bool dark) {
         setStyleSheet(R"(
             QMainWindow, QWidget#appBackground { background: #141a16; color: #f2eadf; }
             QWidget#homeBackground { background: transparent; }
+            QLabel { color: #eee7dc; font-size: 13px; }
+            QFrame#settingsCard { background: rgba(27,37,31,246); border: 1px solid #46584a; border-radius: 22px; }
+            QFrame#settingsSection { background: #202c24; border: 1px solid #3c4b40; border-radius: 15px; }
+            QLabel#settingsSectionTitle { color: #d7b38d; font-size: 11px; font-weight: 750; letter-spacing: 1.4px; }
+            QLabel#settingsSectionHint { color: #b5c0b6; font-size: 12px; }
+            QLabel#settingsRowTitle { color: #f0e8dc; font-size: 13px; font-weight: 650; }
+            QLabel#settingsRowHint { color: #b8c3b9; font-size: 11px; }
+            QLabel#settingsValue { color: #e1c09a; font-size: 12px; font-weight: 700; }
             QFrame#homeCard { background: #1b251f; border: 1px solid #39483d; border-radius: 24px; }
             QFrame#homeActions { background: #222f27; border: 1px solid #39483d; border-radius: 18px; }
             QLabel#homeActionsTitle { color: #f4eadc; font-size: 23px; font-weight: 700; }
@@ -892,6 +901,10 @@ void MainWindow::applyTheme(bool dark) {
             QLabel#fieldLabel, QLabel#sectionTitle { color: #c4a27e; font-size: 10px; font-weight: 700; letter-spacing: 1.4px; }
             QLabel#status { background: #2b3830; color: #f3e8d8; border: 1px solid #45564a; border-radius: 12px; padding: 13px; font-size: 14px; font-weight: 600; }
             QLabel#stats { color: #c1cdbf; background: #2b3830; border-radius: 10px; padding: 10px; font-size: 11px; }
+            QLabel#replayGameName { color: #f1e5d5; font-size: 16px; font-weight: 700; letter-spacing: 0; }
+            QLabel#replayMeta { color: #c3cec4; font-size: 12px; line-height: 1.35; }
+            QLabel#replayMove { background: #2b3830; color: #f5eadc; border: 1px solid #45564a; border-radius: 12px; padding: 14px; font-size: 15px; font-weight: 650; }
+            QLabel#replayHint { color: #bac5bb; font-size: 11px; line-height: 1.4; }
             QFrame#separator { color: #3a473e; max-height: 1px; }
             QComboBox, QListWidget, QTextEdit { background: #18211c; color: #f1e8dc; border: 1px solid #3b4a40; border-radius: 10px; padding: 9px 11px; min-height: 22px; selection-background-color: #72543b; }
             QComboBox:hover, QListWidget:hover { border-color: #c49a70; }
@@ -904,14 +917,20 @@ void MainWindow::applyTheme(bool dark) {
             QPushButton#primary:hover { background: #d4a373; }
             QPushButton#primary:pressed { background: #a8754b; }
             QPushButton#primary:disabled, QPushButton#secondary:disabled { background: #303a33; color: #89958a; border-color: #354139; }
-            QPushButton:focus, QComboBox:focus, QListWidget:focus, QSlider:focus { outline: 2px solid #c18d5d; outline-offset: 2px; }
+            QPushButton:focus { border: 1px solid #d5a777; }
+            QComboBox:focus, QListWidget:focus { border: 1px solid #c18d5d; }
             QPushButton#secondary { background: #303d34; color: #f0e7da; border: 1px solid #46564a; }
             QPushButton#secondary:hover { background: #3a4b40; border-color: #bd956d; }
             QPushButton#textButton { background: transparent; color: #c3cdbf; }
             QPushButton#textButton:hover { background: #303d34; color: #fff4e7; }
             QCheckBox { spacing: 10px; color: #e8e0d5; }
-            QSlider::groove:horizontal { height: 5px; background: #46564a; border-radius: 2px; }
-            QSlider::handle:horizontal { background: #c18d5d; width: 15px; margin: -5px 0; border-radius: 7px; }
+            QSlider { min-height: 28px; }
+            QSlider::groove:horizontal { height: 6px; background: #3a493e; border: 1px solid #506153; border-radius: 3px; }
+            QSlider::sub-page:horizontal { background: #b98559; border-radius: 3px; }
+            QSlider::add-page:horizontal { background: #303c33; border-radius: 3px; }
+            QSlider::handle:horizontal { background: #e0b98f; border: 2px solid #8e6848; width: 17px; height: 17px; margin: -7px 0; border-radius: 9px; }
+            QSlider::handle:horizontal:hover { background: #f0d0aa; border-color: #d0a477; }
+            QSlider::handle:horizontal:disabled { background: #667168; border-color: #4a554d; }
             QStatusBar { background: #101612; color: #a5b1a7; font-size: 11px; }
             QToolButton#drawerToggle { background: #27342c; color: #f3e5d2; border: 1px solid #596c5d; border-radius: 14px; font-size: 22px; }
             QToolButton#drawerToggle:hover { background: #394a3d; }
@@ -927,6 +946,14 @@ void MainWindow::applyTheme(bool dark) {
         setStyleSheet(R"(
             QMainWindow, QWidget#appBackground { background: #f3eee6; color: #352c24; }
             QWidget#homeBackground { background: transparent; }
+            QLabel { color: #493d31; font-size: 13px; }
+            QFrame#settingsCard { background: rgba(255,250,243,248); border: 1px solid #e2d3c1; border-radius: 22px; }
+            QFrame#settingsSection { background: #f7efe4; border: 1px solid #e7d8c6; border-radius: 15px; }
+            QLabel#settingsSectionTitle { color: #8f6848; font-size: 11px; font-weight: 750; letter-spacing: 1.4px; }
+            QLabel#settingsSectionHint { color: #796958; font-size: 12px; }
+            QLabel#settingsRowTitle { color: #423529; font-size: 13px; font-weight: 650; }
+            QLabel#settingsRowHint { color: #786a5b; font-size: 11px; }
+            QLabel#settingsValue { color: #8a6040; font-size: 12px; font-weight: 700; }
             QFrame#homeCard { background: #fffaf3; border: 1px solid #e3d5c4; border-radius: 24px; }
             QFrame#homeActions { background: #f6eee3; border: 1px solid #e6d8c7; border-radius: 18px; }
             QLabel#homeActionsTitle { color: #352c24; font-size: 23px; font-weight: 700; }
@@ -945,6 +972,10 @@ void MainWindow::applyTheme(bool dark) {
             QLabel#fieldLabel, QLabel#sectionTitle { color: #8b6b4d; font-size: 10px; font-weight: 700; letter-spacing: 1.4px; }
             QLabel#status { background: #f0f3ed; color: #4d5e50; border: 1px solid #dfe6dc; border-radius: 12px; padding: 13px; font-size: 14px; font-weight: 600; }
             QLabel#stats { color: #617365; background: #edf1eb; border-radius: 10px; padding: 10px; font-size: 11px; }
+            QLabel#replayGameName { color: #423529; font-size: 16px; font-weight: 700; letter-spacing: 0; }
+            QLabel#replayMeta { color: #756858; font-size: 12px; line-height: 1.35; }
+            QLabel#replayMove { background: #f0e9df; color: #493b2e; border: 1px solid #e1d4c4; border-radius: 12px; padding: 14px; font-size: 15px; font-weight: 650; }
+            QLabel#replayHint { color: #766959; font-size: 11px; line-height: 1.4; }
             QFrame#separator { color: #e9e0d4; max-height: 1px; }
             QComboBox, QListWidget, QTextEdit { background: #fffdf9; color: #3c3026; border: 1px solid #e4d9ca; border-radius: 10px; padding: 9px 11px; min-height: 22px; selection-background-color: #e9d8c2; }
             QComboBox:hover, QListWidget:hover { border-color: #b58b66; }
@@ -957,14 +988,20 @@ void MainWindow::applyTheme(bool dark) {
             QPushButton#primary:hover { background: #9a7353; }
             QPushButton#primary:pressed { background: #704d36; }
             QPushButton#primary:disabled, QPushButton#secondary:disabled { background: #eee8df; color: #a39a8e; border-color: #e5ddd2; }
-            QPushButton:focus, QComboBox:focus, QListWidget:focus, QSlider:focus { outline: 2px solid #98704e; outline-offset: 2px; }
+            QPushButton:focus { border: 1px solid #98704e; }
+            QComboBox:focus, QListWidget:focus { border: 1px solid #98704e; }
             QPushButton#secondary { background: #f1e7da; color: #594633; border: 1px solid #e2d1bd; }
             QPushButton#secondary:hover { background: #ead9c4; border-color: #c7a27e; }
             QPushButton#textButton { background: transparent; color: #777c70; }
             QPushButton#textButton:hover { background: #f0e5d7; color: #594633; }
             QCheckBox { spacing: 10px; color: #594633; }
-            QSlider::groove:horizontal { height: 5px; background: #e2d1bd; border-radius: 2px; }
-            QSlider::handle:horizontal { background: #876044; width: 15px; margin: -5px 0; border-radius: 7px; }
+            QSlider { min-height: 28px; }
+            QSlider::groove:horizontal { height: 6px; background: #e8ddce; border: 1px solid #d8c8b5; border-radius: 3px; }
+            QSlider::sub-page:horizontal { background: #a77a55; border-radius: 3px; }
+            QSlider::add-page:horizontal { background: #eee5da; border-radius: 3px; }
+            QSlider::handle:horizontal { background: #fffaf3; border: 2px solid #98704e; width: 17px; height: 17px; margin: -7px 0; border-radius: 9px; }
+            QSlider::handle:horizontal:hover { background: #f0e1cf; border-color: #785438; }
+            QSlider::handle:horizontal:disabled { background: #e2d9ce; border-color: #cfc3b5; }
             QStatusBar { background: #e9e5dd; color: #777c70; font-size: 11px; }
             QToolButton#drawerToggle { background: #fffaf3; color: #594633; border: 1px solid #dfcbb4; border-radius: 14px; font-size: 22px; }
             QToolButton#drawerToggle:hover { background: #f0e5d7; }
@@ -1652,23 +1689,27 @@ void MainWindow::showReplay(qint64 replayGameId, const QString& gameTitle, QWidg
 
     auto* panel = new QFrame(page);
     panel->setObjectName("sidePanel");
-    panel->setFixedWidth(292);
+    panel->setFixedWidth(320);
     auto* panelLayout = new QVBoxLayout(panel);
-    panelLayout->setContentsMargins(20, 22, 20, 22);
-    panelLayout->setSpacing(12);
+    panelLayout->setContentsMargins(22, 22, 22, 22);
+    panelLayout->setSpacing(14);
 
     auto* gameName = new QLabel(gameTitle, panel);
-    gameName->setObjectName("sectionTitle");
+    gameName->setObjectName("replayGameName");
     gameName->setWordWrap(true);
     auto* replayStatus = new QLabel(panel);
-    replayStatus->setObjectName("muted");
+    replayStatus->setObjectName("replayMeta");
     replayStatus->setWordWrap(true);
+    replayStatus->setMinimumHeight(38);
+    replayStatus->setAlignment(Qt::AlignLeft | Qt::AlignTop);
     auto* moveHeading = new QLabel(QStringLiteral("Текущий ход"), panel);
     moveHeading->setObjectName("fieldLabel");
     auto* moveDetails = new QLabel(panel);
-    moveDetails->setObjectName("status");
+    moveDetails->setObjectName("replayMove");
     moveDetails->setWordWrap(true);
-    moveDetails->setMinimumHeight(70);
+    moveDetails->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    moveDetails->setMinimumHeight(76);
+    moveDetails->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
     auto* moveSlider = new QSlider(Qt::Horizontal, panel);
     moveSlider->setObjectName("replaySlider");
     moveSlider->setRange(0, static_cast<int>(moves.size()));
@@ -1711,7 +1752,7 @@ void MainWindow::showReplay(qint64 replayGameId, const QString& gameTitle, QWidg
     auto* replayHint = new QLabel(
         QStringLiteral("Используйте кнопки или ползунок, чтобы перемещаться по ходам. Текущая партия не изменяется."),
         panel);
-    replayHint->setObjectName("muted");
+    replayHint->setObjectName("replayHint");
     replayHint->setWordWrap(true);
     panelLayout->addWidget(replayHint);
     content->addWidget(panel);
