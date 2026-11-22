@@ -95,6 +95,7 @@ private:
     QPushButton* settingsButton_{};
     QPushButton* homeButton_{};
     QPushButton* homeStart_{};
+    QPushButton* homeLogin_{};
     QMediaPlayer* musicPlayer_{};
     QAudioOutput* musicOutput_{};
     bool musicEnabled_{false};
