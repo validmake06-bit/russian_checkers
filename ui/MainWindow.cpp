@@ -44,7 +44,6 @@
 #include <QVariantAnimation>
 #include <QFontDatabase>
 #include <QApplication>
-#include <QGraphicsOpacityEffect>
 #include <algorithm>
 #include <cmath>
 
@@ -904,7 +903,7 @@ void MainWindow::applyTheme(bool dark) {
             QPushButton#primary:hover { background: #d4a373; }
             QPushButton#primary:pressed { background: #a8754b; }
             QPushButton#primary:disabled, QPushButton#secondary:disabled { background: #303a33; color: #89958a; border-color: #354139; }
-            QPushButton:focus-visible, QComboBox:focus, QListWidget:focus, QSlider:focus { outline: 2px solid #c18d5d; outline-offset: 2px; }
+            QPushButton:focus, QComboBox:focus, QListWidget:focus, QSlider:focus { outline: 2px solid #c18d5d; outline-offset: 2px; }
             QPushButton#secondary { background: #303d34; color: #f0e7da; border: 1px solid #46564a; }
             QPushButton#secondary:hover { background: #3a4b40; border-color: #bd956d; }
             QPushButton#textButton { background: transparent; color: #c3cdbf; }
@@ -957,7 +956,7 @@ void MainWindow::applyTheme(bool dark) {
             QPushButton#primary:hover { background: #9a7353; }
             QPushButton#primary:pressed { background: #704d36; }
             QPushButton#primary:disabled, QPushButton#secondary:disabled { background: #eee8df; color: #a39a8e; border-color: #e5ddd2; }
-            QPushButton:focus-visible, QComboBox:focus, QListWidget:focus, QSlider:focus { outline: 2px solid #98704e; outline-offset: 2px; }
+            QPushButton:focus, QComboBox:focus, QListWidget:focus, QSlider:focus { outline: 2px solid #98704e; outline-offset: 2px; }
             QPushButton#secondary { background: #f1e7da; color: #594633; border: 1px solid #e2d1bd; }
             QPushButton#secondary:hover { background: #ead9c4; border-color: #c7a27e; }
             QPushButton#textButton { background: transparent; color: #777c70; }
