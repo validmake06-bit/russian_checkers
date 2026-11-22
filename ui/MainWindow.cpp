@@ -203,7 +203,9 @@ protected:
             for (int col = 0; col < 8; ++col) {
                 if (((row + col) & 1) == 0) continue;
                 const int alpha = dark ? 12 : 19;
-                p.setBrush(QColor(dark ? "#d6b38c" : "#80583b", alpha));
+                QColor squareColor(dark ? "#d6b38c" : "#80583b");
+                squareColor.setAlpha(alpha);
+                p.setBrush(squareColor);
                 p.drawRect(QRectF(-boardSide / 2 + col * cell,
                                   -boardSide / 2 + row * cell, cell, cell));
             }
@@ -218,7 +220,9 @@ protected:
             const qreal radius = 13.0 + (i % 3) * 3.0;
             p.setPen(QPen(QColor(dark ? 224 : 117, dark ? 195 : 84,
                                  dark ? 157 : 54, dark ? 27 : 30), 1.2));
-            p.setBrush(QColor(dark ? "#d6b38c" : "#80583b", dark ? 13 : 15));
+            QColor pieceColor(dark ? "#d6b38c" : "#80583b");
+            pieceColor.setAlpha(dark ? 13 : 15);
+            p.setBrush(pieceColor);
             p.drawEllipse(QPointF(x, y), radius, radius);
             p.drawEllipse(QPointF(x, y), radius * 0.68, radius * 0.68);
         }
@@ -736,6 +740,7 @@ void MainWindow::toggleGameDrawer() {
 
 void MainWindow::applyTheme(bool dark) {
     darkTheme_ = dark;
+    if (homePage_) homePage_->setProperty("darkTheme", darkTheme_);
     QSettings().setValue(QStringLiteral("appearance/darkTheme"), darkTheme_);
     boardView_->setDarkTheme(darkTheme_);
     themeButton_->setText(darkTheme_ ? QStringLiteral("Светлая тема") : QStringLiteral("Тёмная тема"));
