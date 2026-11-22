@@ -13,6 +13,14 @@
 #include <QStatusBar>
 #include <QGraphicsDropShadowEffect>
 #include <QColor>
+#include <QDataStream>
+#include <QFile>
+#include <QDir>
+#include <QStandardPaths>
+#include <QVector>
+#include <QPropertyAnimation>
+#include <QGraphicsOpacityEffect>
+#include <QtMath>
 #include <QSettings>
 #include <QSoundEffect>
 #include <QCheckBox>
@@ -26,6 +34,131 @@
 #include <algorithm>
 
 using namespace checkers;
+
+namespace {
+QByteArray makeMonoWav(const QVector<qint16>& samples, int sampleRate) {
+    QByteArray bytes;
+    QDataStream stream(&bytes, QIODevice::WriteOnly);
+    stream.setByteOrder(QDataStream::LittleEndian);
+    stream.writeRawData("RIFF", 4);
+    stream << quint32(36 + samples.size() * 2);
+    stream.writeRawData("WAVEfmt ", 8);
+    stream << quint32(16) << quint16(1) << quint16(1)
+           << quint32(sampleRate) << quint32(sampleRate * 2)
+           << quint16(2) << quint16(16);
+    stream.writeRawData("data", 4);
+    stream << quint32(samples.size() * 2);
+    for (qint16 sample : samples) stream << sample;
+    return bytes;
+}
+
+QString createSoundPack() {
+    constexpr int rate = 22050;
+    const QString directory = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)
+                              + QStringLiteral("/audio");
+    QDir().mkpath(directory);
+
+    auto save = [&](const QString& name, const QVector<qint16>& samples) {
+        QFile file(directory + QLatin1Char('/') + name);
+        if (file.open(QIODevice::WriteOnly))
+            file.write(makeMonoWav(samples, rate));
+    };
+    auto clampSample = [](double value) {
+        return static_cast<qint16>(qBound(-32767, qRound(value * 32767.0), 32767));
+    };
+
+    QVector<qint16> move;
+    move.reserve(rate / 5);
+    quint32 noise = 0x6d2b79f5u;
+    for (int i = 0; i < rate / 5; ++i) {
+        const double t = double(i) / rate;
+        noise = noise * 1664525u + 1013904223u;
+        const double random = (double((noise >> 8) & 0xffffu) / 32767.5) - 1.0;
+        const double thump = std::sin(2.0 * M_PI * 118.0 * t) * std::exp(-t * 34.0) * 0.42;
+        const double wood = std::sin(2.0 * M_PI * 245.0 * t) * std::exp(-t * 58.0) * 0.12;
+        const double texture = random * std::exp(-t * 78.0) * 0.055;
+        move.push_back(clampSample(thump + wood + texture));
+    }
+    save(QStringLiteral("wood_move.wav"), move);
+
+    QVector<qint16> capture;
+    capture.reserve(rate / 4);
+    for (int i = 0; i < rate / 4; ++i) {
+        const double t = double(i) / rate;
+        const double thump = std::sin(2.0 * M_PI * 86.0 * t) * std::exp(-t * 23.0) * 0.48;
+        const double knock = std::sin(2.0 * M_PI * 174.0 * t) * std::exp(-t * 38.0) * 0.16;
+        capture.push_back(clampSample(thump + knock));
+    }
+    save(QStringLiteral("wood_capture.wav"), capture);
+
+    QVector<qint16> click;
+    click.reserve(rate / 16);
+    for (int i = 0; i < rate / 16; ++i) {
+        const double t = double(i) / rate;
+        const double envelope = std::exp(-t * 125.0);
+        const double tone = std::sin(2.0 * M_PI * 920.0 * t) * 0.10
+                          + std::sin(2.0 * M_PI * 1480.0 * t) * 0.035;
+        click.push_back(clampSample(tone * envelope));
+    }
+    save(QStringLiteral("button_click.wav"), click);
+
+    // A quiet, slow instrumental pad. Four warm seventh/suspended chords form
+    // a seamless 16-second loop without percussion or sharp transients.
+    const double chords[4][4] = {
+        {261.63, 329.63, 392.00, 493.88},
+        {220.00, 261.63, 329.63, 392.00},
+        {174.61, 220.00, 261.63, 329.63},
+        {196.00, 220.00, 293.66, 392.00}
+    };
+    QVector<qint16> ambient;
+    const int musicLength = rate * 16;
+    ambient.reserve(musicLength);
+    for (int i = 0; i < musicLength; ++i) {
+        const double t = double(i) / rate;
+        const double section = t / 4.0;
+        const int chord = int(section) % 4;
+        const double local = section - std::floor(section);
+        const double blend = qBound(0.0, (local - 0.82) / 0.18, 1.0);
+        double sample = 0.0;
+        for (int n = 0; n < 4; ++n) {
+            const double a = std::sin(2.0 * M_PI * chords[chord][n] * t + n * 0.31);
+            const double b = std::sin(2.0 * M_PI * chords[(chord + 1) % 4][n] * t + n * 0.31);
+            sample += ((1.0 - blend) * a + blend * b) * (n == 0 ? 0.115 : 0.072);
+        }
+        const double slowBreath = 0.88 + 0.12 * std::sin(2.0 * M_PI * t / 11.0);
+        const double edge = qMin(1.0, qMin(t / 0.45, (16.0 - t) / 0.45));
+        ambient.push_back(clampSample(sample * slowBreath * qBound(0.0, edge, 1.0) * 0.48));
+    }
+    save(QStringLiteral("calm_ambient.wav"), ambient);
+    return directory;
+}
+
+void addButtonFeedback(QPushButton* button, QSoundEffect* clickSound) {
+    if (!button || button->property("feedbackInstalled").toBool()) return;
+    button->setProperty("feedbackInstalled", true);
+    button->setCursor(Qt::PointingHandCursor);
+    auto* opacity = new QGraphicsOpacityEffect(button);
+    button->setGraphicsEffect(opacity);
+    auto* animation = new QPropertyAnimation(opacity, "opacity", button);
+    animation->setDuration(105);
+    animation->setEasingCurve(QEasingCurve::OutCubic);
+    QObject::connect(button, &QPushButton::pressed, button, [opacity, animation] {
+        animation->stop();
+        animation->setStartValue(opacity->opacity());
+        animation->setEndValue(0.78);
+        animation->start();
+    });
+    QObject::connect(button, &QPushButton::released, button, [opacity, animation] {
+        animation->stop();
+        animation->setStartValue(opacity->opacity());
+        animation->setEndValue(1.0);
+        animation->start();
+    });
+    QObject::connect(button, &QPushButton::clicked, button, [clickSound] {
+        if (clickSound) clickSound->play();
+    });
+}
+} // namespace
 
 MainWindow::MainWindow(Database& database, qint64 userId, QString username, QWidget* parent)
     : QMainWindow(parent), database_(database), userId_(userId), username_(std::move(username)) {
@@ -140,52 +273,65 @@ MainWindow::MainWindow(Database& database, qint64 userId, QString username, QWid
     root->addWidget(panel);
     gamePage_ = central;
 
-    // Minimalist start screen: game, statistics, preferences and profile entry points.
+    // A calmer, more deliberate start screen with a warm visual focal point.
     homePage_ = new QWidget(this);
-    homePage_->setObjectName("appBackground");
+    homePage_->setObjectName("homeBackground");
     auto* homeLayout = new QVBoxLayout(homePage_);
-    homeLayout->setContentsMargins(64, 42, 64, 42);
-    homeLayout->setSpacing(18);
+    homeLayout->setContentsMargins(34, 24, 34, 24);
     homeLayout->addStretch(1);
-    auto* homeBrand = new QLabel(QStringLiteral("RUSSIAN CHECKERS"), homePage_);
+
+    auto* homeCard = new QFrame(homePage_);
+    homeCard->setObjectName("homeCard");
+    homeCard->setMaximumWidth(560);
+    auto* homeCardLayout = new QVBoxLayout(homeCard);
+    homeCardLayout->setContentsMargins(48, 36, 48, 34);
+    homeCardLayout->setSpacing(13);
+
+    auto* homeBrand = new QLabel(QStringLiteral("RUSSIAN CHECKERS  /  CLASSIC"), homeCard);
     homeBrand->setObjectName("brand");
     homeBrand->setAlignment(Qt::AlignCenter);
-    auto* homeTitle = new QLabel(QStringLiteral("Русские шашки"), homePage_);
-    homeTitle->setObjectName("title");
+    auto* homeEmblem = new QLabel(QStringLiteral("♟"), homeCard);
+    homeEmblem->setObjectName("homeEmblem");
+    homeEmblem->setAlignment(Qt::AlignCenter);
+    auto* homeTitle = new QLabel(QStringLiteral("Русские шашки"), homeCard);
+    homeTitle->setObjectName("homeTitle");
     homeTitle->setAlignment(Qt::AlignCenter);
-    auto* homeSubtitle = new QLabel(QStringLiteral("Игра против компьютера"), homePage_);
-    homeSubtitle->setObjectName("muted");
+    auto* homeSubtitle = new QLabel(QStringLiteral("Спокойная партия. Чистая стратегия."), homeCard);
+    homeSubtitle->setObjectName("homeSubtitle");
     homeSubtitle->setAlignment(Qt::AlignCenter);
-    homeUserLabel_ = new QLabel(QStringLiteral("Вы вошли как  ·  %1").arg(username_), homePage_);
+    homeUserLabel_ = new QLabel(QStringLiteral("Вы вошли как  ·  %1").arg(username_), homeCard);
     homeUserLabel_->setObjectName("userLabel");
     homeUserLabel_->setAlignment(Qt::AlignCenter);
-    homeStart_ = new QPushButton(QStringLiteral("Начать игру"), homePage_);
+
+    homeStart_ = new QPushButton(QStringLiteral("Начать партию"), homeCard);
     homeStart_->setObjectName("primary");
-    homeStart_->setMinimumHeight(52);
-    auto* homeStats = new QPushButton(QStringLiteral("Моя статистика"), homePage_);
+    homeStart_->setMinimumHeight(56);
+    auto* homeStats = new QPushButton(QStringLiteral("Моя статистика"), homeCard);
     homeStats->setObjectName("secondary");
-    homeStats->setMinimumHeight(46);
-    auto* homeSettings = new QPushButton(QStringLiteral("Настройки"), homePage_);
+    homeStats->setMinimumHeight(48);
+    auto* homeSettings = new QPushButton(QStringLiteral("Настройки"), homeCard);
     homeSettings->setObjectName("secondary");
-    homeSettings->setMinimumHeight(46);
-    auto* homeTheme = new QPushButton(homePage_);
+    homeSettings->setMinimumHeight(48);
+    auto* homeTheme = new QPushButton(homeCard);
     homeTheme->setObjectName("textButton");
-    homeTheme->setText(darkTheme_ ? QStringLiteral("Переключить на светлую тему") : QStringLiteral("Переключить на тёмную тему"));
-    auto* homeFooter = new QLabel(QStringLiteral("Версия 0.6  ·  Русские шашки против компьютера"), homePage_);
-    homeFooter->setObjectName("muted");
+    homeTheme->setText(darkTheme_ ? QStringLiteral("Светлая тема") : QStringLiteral("Тёмная тема"));
+    auto* homeFooter = new QLabel(QStringLiteral("РУССКИЕ ШАШКИ  ·  ВЕРСИЯ 0.7"), homePage_);
+    homeFooter->setObjectName("homeFooter");
     homeFooter->setAlignment(Qt::AlignCenter);
-    homeLayout->addWidget(homeBrand);
-    homeLayout->addSpacing(12);
-    homeLayout->addWidget(homeTitle);
-    // Keep the start screen focused on the game rather than promotional copy.
-    homeSubtitle->hide();
-    homeLayout->addSpacing(10);
-    homeLayout->addWidget(homeUserLabel_);
-    homeLayout->addSpacing(14);
-    homeLayout->addWidget(homeStart_);
-    homeLayout->addWidget(homeStats);
-    homeLayout->addWidget(homeSettings);
-    homeLayout->addWidget(homeTheme);
+
+    homeCardLayout->addWidget(homeBrand);
+    homeCardLayout->addSpacing(2);
+    homeCardLayout->addWidget(homeEmblem);
+    homeCardLayout->addWidget(homeTitle);
+    homeCardLayout->addWidget(homeSubtitle);
+    homeCardLayout->addSpacing(7);
+    homeCardLayout->addWidget(homeUserLabel_);
+    homeCardLayout->addSpacing(9);
+    homeCardLayout->addWidget(homeStart_);
+    homeCardLayout->addWidget(homeStats);
+    homeCardLayout->addWidget(homeSettings);
+    homeCardLayout->addWidget(homeTheme);
+    homeLayout->addWidget(homeCard, 0, Qt::AlignHCenter);
     homeLayout->addStretch(1);
     homeLayout->addWidget(homeFooter);
 
@@ -238,18 +384,23 @@ MainWindow::MainWindow(Database& database, qint64 userId, QString username, QWid
     captureSound_ = new QSoundEffect(this);
     victorySound_ = new QSoundEffect(this);
     defeatSound_ = new QSoundEffect(this);
-    moveSound_->setSource(QUrl(QStringLiteral("qrc:/sounds/move.wav")));
-    captureSound_->setSource(QUrl(QStringLiteral("qrc:/sounds/capture.wav")));
+    buttonSound_ = new QSoundEffect(this);
+    const QString audioDirectory = createSoundPack();
+    moveSound_->setSource(QUrl::fromLocalFile(audioDirectory + QStringLiteral("/wood_move.wav")));
+    captureSound_->setSource(QUrl::fromLocalFile(audioDirectory + QStringLiteral("/wood_capture.wav")));
+    buttonSound_->setSource(QUrl::fromLocalFile(audioDirectory + QStringLiteral("/button_click.wav")));
     victorySound_->setSource(QUrl(QStringLiteral("qrc:/sounds/victory.wav")));
     defeatSound_->setSource(QUrl(QStringLiteral("qrc:/sounds/defeat.wav")));
     applySoundSettings(soundsEnabled_, soundVolume_);
     musicOutput_ = new QAudioOutput(this);
     musicPlayer_ = new QMediaPlayer(this);
     musicPlayer_->setAudioOutput(musicOutput_);
-    musicPlayer_->setSource(QUrl(QStringLiteral("qrc:/sounds/ambient.wav")));
+    musicPlayer_->setSource(QUrl::fromLocalFile(audioDirectory + QStringLiteral("/calm_ambient.wav")));
     musicPlayer_->setLoops(QMediaPlayer::Infinite);
     musicOutput_->setVolume(musicVolume_);
     if (musicEnabled_) musicPlayer_->play();
+    const auto buttons = findChildren<QPushButton*>();
+    for (QPushButton* button : buttons) addButtonFeedback(button, buttonSound_);
     applyTheme(darkTheme_);
     connect(boardView_, &BoardWidget::animationFinished, this, [this] {
         if (aiThinking_ || gameOver()) return;
@@ -451,6 +602,24 @@ void MainWindow::applyTheme(bool dark) {
     if (darkTheme_) {
         setStyleSheet(R"(
             QMainWindow, QWidget#appBackground { background: #151a20; color: #edf0f3; font-family: "Segoe UI"; font-size: 13px; }
+            QWidget#homeBackground { background: qradialgradient(cx:0.82, cy:0.16, radius:0.95, fx:0.82, fy:0.16, stop:0 #34483d, stop:0.46 #1d2823, stop:1 #121916); }
+            QFrame#homeCard { background: rgba(27, 36, 31, 238); border: 1px solid #536b59; border-radius: 26px; }
+            QLabel#homeEmblem { color: #b2c4ad; font-size: 72px; }
+            QLabel#homeTitle { color: #f4f1e8; font-size: 36px; font-weight: 750; }
+            QLabel#homeSubtitle { color: #c0cbbf; font-size: 14px; }
+            QLabel#homeFooter { color: #a0afa2; font-size: 10px; font-weight: 600; letter-spacing: 2px; }
+            QFrame#sidePanel QLabel { color: #e7ece7; }
+            QFrame#sidePanel QLabel#brand { color: #a9bca9; }
+            QFrame#sidePanel QLabel#muted { color: #c0c9c1; }
+            QFrame#sidePanel QLabel#fieldLabel, QFrame#sidePanel QLabel#sectionTitle { color: #c2cec4; }
+            QFrame#sidePanel QLabel#stats { color: #c4cec5; }
+            QFrame#sidePanel QLabel#userLabel { color: #e5ece5; }
+            QFrame#sidePanel QFormLayout QLabel { color: #e7ece7; }
+            QFrame#sidePanel QPushButton { font-size: 13px; min-height: 24px; padding: 12px 14px; border-radius: 12px; }
+            QFrame#sidePanel QPushButton#primary { color: #18231b; }
+            QFrame#sidePanel QPushButton#secondary { color: #f0f3ef; }
+            QFrame#sidePanel QPushButton#textButton { color: #c5d0c7; }
+
             QFrame#sidePanel { background: #1e252d; border: 1px solid #303a44; border-radius: 22px; }
             QLabel#brand { color: #9eaa9f; font-size: 10px; font-weight: 700; letter-spacing: 2px; }
             QLabel#title { color: #f3f4f2; font-size: 25px; font-weight: 700; }
@@ -483,6 +652,24 @@ void MainWindow::applyTheme(bool dark) {
     } else {
         setStyleSheet(R"(
             QMainWindow, QWidget#appBackground { background: #f1f3ef; color: #303832; font-family: "Segoe UI"; font-size: 13px; }
+            QWidget#homeBackground { background: qradialgradient(cx:0.82, cy:0.16, radius:0.95, fx:0.82, fy:0.16, stop:0 #e1e9dc, stop:0.48 #e9eee5, stop:1 #d8e0d5); }
+            QFrame#homeCard { background: rgba(255, 255, 251, 246); border: 1px solid #cbd8c8; border-radius: 26px; }
+            QLabel#homeEmblem { color: #758d77; font-size: 72px; }
+            QLabel#homeTitle { color: #26382c; font-size: 36px; font-weight: 750; }
+            QLabel#homeSubtitle { color: #586b5c; font-size: 14px; }
+            QLabel#homeFooter { color: #647767; font-size: 10px; font-weight: 600; letter-spacing: 2px; }
+            QFrame#sidePanel QLabel { color: #26362b; }
+            QFrame#sidePanel QLabel#brand { color: #647d68; }
+            QFrame#sidePanel QLabel#muted { color: #586b5d; }
+            QFrame#sidePanel QLabel#fieldLabel, QFrame#sidePanel QLabel#sectionTitle { color: #506653; }
+            QFrame#sidePanel QLabel#stats { color: #506253; }
+            QFrame#sidePanel QLabel#userLabel { color: #3d5242; }
+            QFrame#sidePanel QFormLayout QLabel { color: #26362b; }
+            QFrame#sidePanel QPushButton { font-size: 13px; min-height: 24px; padding: 12px 14px; border-radius: 12px; }
+            QFrame#sidePanel QPushButton#primary { color: #ffffff; }
+            QFrame#sidePanel QPushButton#secondary { color: #405845; }
+            QFrame#sidePanel QPushButton#textButton { color: #536a57; }
+
             QFrame#sidePanel { background: #ffffff; border: 1px solid #e1e7df; border-radius: 22px; }
             QLabel#brand { color: #718276; font-size: 10px; font-weight: 700; letter-spacing: 2px; }
             QLabel#title { color: #29332d; font-size: 25px; font-weight: 700; }
@@ -607,6 +794,8 @@ void MainWindow::openSettings() {
         outer->addStretch(1);
         pages_->addWidget(settingsPage_);
 
+        addButtonFeedback(back, buttonSound_);
+        addButtonFeedback(save, buttonSound_);
         connect(back, &QPushButton::clicked, this, [this] {
             pages_->setCurrentWidget(pageBeforeSettings_ ? pageBeforeSettings_ : homePage_);
         });
@@ -718,6 +907,8 @@ void MainWindow::showInlinePrompt(const QString& title, const QString& message,
         }
         if (callback) callback(accepted);
     };
+    addButtonFeedback(accept, buttonSound_);
+    if (cancel) addButtonFeedback(cancel, buttonSound_);
     connect(accept, &QPushButton::clicked, this, [finish] { finish(true); });
     if (cancel) connect(cancel, &QPushButton::clicked, this, [finish] { finish(false); });
 }
