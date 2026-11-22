@@ -35,6 +35,17 @@ int main(int argc, char* argv[]) {
         CHECK(statistics.contains(QStringLiteral("Всего партий: 1")));
         CHECK(statistics.contains(QStringLiteral("Победы: 1")));
 
+        UserStatistics metrics;
+        CHECK(database.getUserStatistics(userId, &metrics, &error));
+        CHECK(metrics.totalGames == 1);
+        CHECK(metrics.wins == 1);
+        CHECK(metrics.losses == 0);
+        CHECK(metrics.draws == 0);
+        CHECK(metrics.totalMoves == 1);
+        CHECK(metrics.winRatePercent == 100);
+        CHECK(metrics.totalPlaySeconds >= 0);
+        CHECK(metrics.averageGameSeconds >= 0);
+
         const QString protocolPath = temporary.filePath(QStringLiteral("game.txt"));
         CHECK(database.saveProtocol(protocolPath, QStringLiteral("Tester"),
                                     {QStringLiteral("a3-b4")}, QStringLiteral("win"), &error));
