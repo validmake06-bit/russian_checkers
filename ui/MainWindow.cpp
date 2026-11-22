@@ -1372,7 +1372,7 @@ void MainWindow::showStatistics() {
     layout->addWidget(ratePanel);
 
     // Recent games are intentionally limited to the latest 50 records.
-    auto* historyHeading = new QLabel(QStringLiteral("Последние партии"), card);
+    auto* historyHeading = new QLabel(QStringLiteral("Избранное и последние партии"), card);
     historyHeading->setObjectName("sectionTitle");
     auto* historyHint = new QLabel(QStringLiteral("Выберите партию, чтобы посмотреть сохранённую запись ходов. Хранятся последние 50 партий."), card);
     historyHint->setObjectName("muted");
@@ -1396,6 +1396,14 @@ void MainWindow::showStatistics() {
     replayButton->setObjectName("primary");
     replayButton->setMinimumHeight(44);
     replayButton->setEnabled(false);
+    auto* favoriteButton = new QPushButton(QStringLiteral("☆  В избранное"), card);
+    favoriteButton->setObjectName("secondary");
+    favoriteButton->setMinimumHeight(44);
+    favoriteButton->setEnabled(false);
+    auto* historyActions = new QHBoxLayout;
+    historyActions->setSpacing(10);
+    historyActions->addWidget(favoriteButton);
+    historyActions->addWidget(replayButton, 1);
 
     QList<RecentGameRecord> recentGames;
     QString historyError;
@@ -1413,12 +1421,17 @@ void MainWindow::showStatistics() {
                 : QStringLiteral("—");
             const QString dateLabel = QDateTime::fromString(game.startedAt, QStringLiteral("yyyy-MM-dd HH:mm:ss"))
                 .toString(QStringLiteral("dd.MM.yyyy  HH:mm"));
+            const QString itemLabel = QStringLiteral("%1   ·   %2\n%3  ·  %4 ходов")
+                .arg(dateLabel.isEmpty() ? game.startedAt : dateLabel)
+                .arg(resultLabel).arg(difficultyLabel).arg(game.moveCount);
             auto* item = new QListWidgetItem(
-                QStringLiteral("%1   ·   %2\n%3  ·  %4 ходов")
-                    .arg(dateLabel.isEmpty() ? game.startedAt : dateLabel)
-                    .arg(resultLabel).arg(difficultyLabel).arg(game.moveCount), recentList);
+                (game.isFavorite ? QStringLiteral("★  ") : QString()) + itemLabel, recentList);
             item->setData(Qt::UserRole, game.id);
-            item->setToolTip(QStringLiteral("Партия №%1").arg(game.id));
+            item->setData(Qt::UserRole + 1, game.isFavorite);
+            item->setData(Qt::UserRole + 2, itemLabel);
+            item->setToolTip(game.isFavorite
+                ? QStringLiteral("Избранная партия №%1 — не удаляется при очистке истории").arg(game.id)
+                : QStringLiteral("Партия №%1").arg(game.id));
         }
         if (recentList->count() == 0)
             recentList->addItem(QStringLiteral("Сохранённых партий пока нет"));
@@ -1427,13 +1440,19 @@ void MainWindow::showStatistics() {
         recentList->setToolTip(historyError);
     }
     connect(recentList, &QListWidget::currentItemChanged, this,
-        [this, moveDetails, recentList, replayButton](QListWidgetItem* current, QListWidgetItem*) {
+        [this, moveDetails, recentList, replayButton, favoriteButton](QListWidgetItem* current, QListWidgetItem*) {
             if (!current || !current->data(Qt::UserRole).isValid()) {
                 moveDetails->clear();
                 replayButton->setEnabled(false);
+                favoriteButton->setEnabled(false);
+                favoriteButton->setText(QStringLiteral("☆  В избранное"));
                 return;
             }
             replayButton->setEnabled(true);
+            favoriteButton->setEnabled(true);
+            favoriteButton->setText(current->data(Qt::UserRole + 1).toBool()
+                ? QStringLiteral("★  Убрать из избранного")
+                : QStringLiteral("☆  В избранное"));
             QStringList moves;
             QString error;
             const qint64 selectedGameId = current->data(Qt::UserRole).toLongLong();
@@ -1450,7 +1469,27 @@ void MainWindow::showStatistics() {
     layout->addWidget(historyHeading);
     layout->addWidget(historyHint);
     layout->addLayout(historyLayout);
-    layout->addWidget(replayButton);
+    layout->addLayout(historyActions);
+    connect(favoriteButton, &QPushButton::clicked, this, [this, recentList, favoriteButton] {
+        auto* current = recentList->currentItem();
+        if (!current || !current->data(Qt::UserRole).isValid()) return;
+        const qint64 selectedGameId = current->data(Qt::UserRole).toLongLong();
+        const bool makeFavorite = !current->data(Qt::UserRole + 1).toBool();
+        QString error;
+        if (!database_.setGameFavorite(userId_, selectedGameId, makeFavorite, &error)) {
+            showInlineMessage(QStringLiteral("Не удалось изменить избранное"), error);
+            return;
+        }
+        current->setData(Qt::UserRole + 1, makeFavorite);
+        const QString itemLabel = current->data(Qt::UserRole + 2).toString();
+        current->setText((makeFavorite ? QStringLiteral("★  ") : QString()) + itemLabel);
+        current->setToolTip(makeFavorite
+            ? QStringLiteral("Избранная партия №%1 — не удаляется при очистке истории").arg(selectedGameId)
+            : QStringLiteral("Партия №%1").arg(selectedGameId));
+        favoriteButton->setText(makeFavorite
+            ? QStringLiteral("★  Убрать из избранного")
+            : QStringLiteral("☆  В избранное"));
+    });
     connect(replayButton, &QPushButton::clicked, this, [this, recentList, page] {
         auto* current = recentList->currentItem();
         if (!current || !current->data(Qt::UserRole).isValid()) return;
