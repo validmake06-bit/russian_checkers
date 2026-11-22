@@ -37,6 +37,7 @@
 #include <QPainter>
 #include <QTimer>
 #include <QProgressBar>
+#include <QVariantAnimation>
 #include <QFontDatabase>
 #include <QApplication>
 #include <QGraphicsOpacityEffect>
@@ -259,6 +260,16 @@ public:
         : QWidget(parent), percent_(qBound(0, percent, 100)) {
         setMinimumSize(136, 136);
         setMaximumSize(148, 148);
+        auto* reveal = new QVariantAnimation(this);
+        reveal->setDuration(850);
+        reveal->setStartValue(0);
+        reveal->setEndValue(percent_);
+        reveal->setEasingCurve(QEasingCurve::OutCubic);
+        connect(reveal, &QVariantAnimation::valueChanged, this, [this](const QVariant& value) {
+            currentPercent_ = value.toInt();
+            update();
+        });
+        reveal->start(QAbstractAnimation::DeleteWhenStopped);
     }
     void setDarkTheme(bool dark) { dark_ = dark; update(); }
 protected:
@@ -271,16 +282,17 @@ protected:
         p.setPen(QPen(dark_ ? QColor("#3a473e") : QColor("#e6dacb"), 10.0, Qt::SolidLine, Qt::RoundCap));
         p.drawArc(circle, 90 * 16, -360 * 16);
         p.setPen(QPen(dark_ ? QColor("#d5a777") : QColor("#8c6444"), 10.0, Qt::SolidLine, Qt::RoundCap));
-        p.drawArc(circle, 90 * 16, -percent_ * 360 * 16 / 100);
+        p.drawArc(circle, 90 * 16, -currentPercent_ * 360 * 16 / 100);
         p.setPen(dark_ ? QColor("#f4eadc") : QColor("#3c3026"));
         QFont font = p.font();
         font.setPointSize(22);
         font.setWeight(QFont::DemiBold);
         p.setFont(font);
-        p.drawText(rect(), Qt::AlignCenter, QStringLiteral("%1%").arg(percent_));
+        p.drawText(rect(), Qt::AlignCenter, QStringLiteral("%1%").arg(currentPercent_));
     }
 private:
     int percent_{0};
+    int currentPercent_{0};
     bool dark_{true};
 };
 } // namespace
