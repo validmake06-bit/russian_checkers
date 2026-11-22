@@ -6,7 +6,6 @@
 #include <QPropertyAnimation>
 class QFrame;
 class QScrollArea;
-class QGraphicsOpacityEffect;
 class QCheckBox;
 class QSlider;
 #include <QFutureWatcher>
