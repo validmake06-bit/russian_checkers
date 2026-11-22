@@ -15,19 +15,29 @@ BoardWidget::BoardWidget(QWidget* parent) : QWidget(parent) {
         setAnimatedPosition(v.toPointF());
     });
     connect(&animation_, &QVariantAnimation::finished, this, [this] {
-        animating_ = false;
-        animatedSquare_ = -1;
-        fadingCount_ = 0;
-        update();
-        emit animationFinished();
+        if (animatedMove_.isCapture && animationSegment_ < animatedMove_.length) {
+            fadingCount_ = 1;
+            fadingSquares_[0] = animatedMove_.captured[static_cast<std::size_t>(animationSegment_)];
+            fadingPieces_[0] = capturedPieces_[static_cast<std::size_t>(animationSegment_)];
+            captureOpacity_ = 1.0;
+            captureAnimation_.stop();
+            captureAnimation_.setDuration(170);
+            captureAnimation_.start();
+        } else {
+            advanceAnimationSequence();
+        }
     });
-    captureAnimation_.setDuration(210);
+    captureAnimation_.setDuration(170);
     captureAnimation_.setStartValue(1.0);
     captureAnimation_.setEndValue(0.0);
     captureAnimation_.setEasingCurve(QEasingCurve::OutCubic);
     connect(&captureAnimation_, &QVariantAnimation::valueChanged, this, [this](const QVariant& value) {
         captureOpacity_ = value.toReal();
         update();
+    });
+    connect(&captureAnimation_, &QVariantAnimation::finished, this, [this] {
+        fadingCount_ = 0;
+        advanceAnimationSequence();
     });
 }
 
@@ -165,32 +175,71 @@ void BoardWidget::mousePressEvent(QMouseEvent* event) {
     if(square>=0) emit squareClicked(square);
 }
 
-void BoardWidget::animateMove(const Move& move, const Board& resultingBoard) {
-    const Piece moving = board_.at(move.from);
-    if (moving == Piece::Empty) { board_ = resultingBoard; update(); emit animationFinished(); return; }
+void BoardWidget::startAnimationSegment() {
+    if (animationSegment_ >= animatedMove_.length) {
+        finishAnimationSequence();
+        return;
+    }
+    const Square fromSquare = animationSegment_ == 0
+        ? animatedMove_.from
+        : animatedMove_.landings[static_cast<std::size_t>(animationSegment_ - 1)];
+    const Square toSquare = animatedMove_.landings[static_cast<std::size_t>(animationSegment_)];
+    const QPointF from = squareCenter(fromSquare);
+    const QPointF to = squareCenter(toSquare);
+    animatedPosition_ = from;
+    animatedSquare_ = animatedMove_.to();
+    animation_.stop();
+    animation_.setDuration(animatedMove_.isCapture ? 235 : 210);
+    animation_.setStartValue(from);
+    animation_.setEndValue(to);
+    update();
+    animation_.start();
+}
 
+void BoardWidget::advanceAnimationSequence() {
+    ++animationSegment_;
+    if (animationSegment_ < animatedMove_.length) {
+        startAnimationSegment();
+        return;
+    }
+    finishAnimationSequence();
+}
+
+void BoardWidget::finishAnimationSequence() {
+    animating_ = false;
+    animatedSquare_ = -1;
     fadingCount_ = 0;
+    movingPiece_ = Piece::Empty;
+    captureOpacity_ = 0.0;
+    update();
+    emit animationFinished();
+}
+
+void BoardWidget::animateMove(const Move& move, const Board& resultingBoard) {
+    const Board before = board_;
+    movingPiece_ = before.at(move.from);
+    if (movingPiece_ == Piece::Empty || !move.valid()) {
+        board_ = resultingBoard;
+        update();
+        emit animationFinished();
+        return;
+    }
+
+    animatedMove_ = move;
+    animationSegment_ = 0;
+    fadingCount_ = 0;
+    capturedPieces_.fill(Piece::Empty);
     if (move.isCapture) {
         for (int i = 0; i < move.length && i < checkers::MaxCaptures; ++i) {
             const Square capturedSquare = move.captured[static_cast<std::size_t>(i)];
-            if (capturedSquare >= 0) {
-                fadingSquares_[static_cast<std::size_t>(fadingCount_)] = capturedSquare;
-                fadingPieces_[static_cast<std::size_t>(fadingCount_)] = board_.at(capturedSquare);
-                ++fadingCount_;
-            }
+            if (capturedSquare >= 0)
+                capturedPieces_[static_cast<std::size_t>(i)] = before.at(capturedSquare);
         }
     }
 
-    const QPointF from = squareCenter(move.from), to = squareCenter(move.to());
     board_ = resultingBoard;
-    animatedSquare_ = move.to();
-    animatedPosition_ = from;
     animating_ = true;
-    captureOpacity_ = fadingCount_ > 0 ? 1.0 : 0.0;
-    animation_.stop();
+    captureOpacity_ = 0.0;
     captureAnimation_.stop();
-    animation_.setStartValue(from);
-    animation_.setEndValue(to);
-    if (fadingCount_ > 0) captureAnimation_.start();
-    animation_.start();
+    startAnimationSegment();
 }
