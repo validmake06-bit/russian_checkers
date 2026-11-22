@@ -1374,7 +1374,7 @@ void MainWindow::showStatistics() {
     // Recent games are intentionally limited to the latest 50 records.
     auto* historyHeading = new QLabel(QStringLiteral("Избранное и последние партии"), card);
     historyHeading->setObjectName("sectionTitle");
-    auto* historyHint = new QLabel(QStringLiteral("Выберите партию, чтобы посмотреть сохранённую запись ходов. Хранятся последние 50 партий."), card);
+    auto* historyHint = new QLabel(QStringLiteral("В списке последние 50 партий и все избранные. Избранные игры сохраняются, даже когда уходят из обычной истории."), card);
     historyHint->setObjectName("muted");
     historyHint->setWordWrap(true);
     auto* historyLayout = new QHBoxLayout;
