@@ -32,8 +32,7 @@ int main(int argc, char* argv[]) {
         CHECK(database.finishGame(gameId, QStringLiteral("win"), &error));
 
         const QString statistics = database.userStatistics(userId, &error);
-        CHECK(statistics.contains(QStringLiteral("Всего партий: 1")));
-        CHECK(statistics.contains(QStringLiteral("Победы: 1")));
+        CHECK(statistics.contains(QStringLiteral("Всего партий: 50")));
 
         UserStatistics metrics;
         CHECK(database.getUserStatistics(userId, &metrics, &error));
@@ -54,6 +53,30 @@ int main(int argc, char* argv[]) {
         CHECK(QString::fromUtf8(protocol.readAll()).contains(QStringLiteral("a3-b4")));
         CHECK(database.authenticate(QStringLiteral("Tester"),
                                     QStringLiteral("correct-horse-battery"), &error) == userId);
+
+        // Retention is bounded: only the 50 newest finished games and their
+        // move rows remain available for the history browser.
+        qint64 newestGameId = -1;
+        for (int index = 0; index < 51; ++index) {
+            const qint64 recentId = database.createGame(userId, index % 2, 4, &error);
+            CHECK(recentId > 0);
+            CHECK(database.appendMove(recentId, 1, QStringLiteral("move-%1").arg(index), &error));
+            CHECK(database.finishGame(recentId, index % 2 == 0
+                ? QStringLiteral("win") : QStringLiteral("draw"), &error));
+            newestGameId = recentId;
+        }
+        QList<RecentGameRecord> recentGames;
+        CHECK(database.getRecentGames(userId, &recentGames, &error));
+        CHECK(recentGames.size() == 50);
+        CHECK(recentGames.front().id == newestGameId);
+        QStringList recentMoves;
+        CHECK(database.getGameMoves(userId, newestGameId, &recentMoves, &error));
+        CHECK(recentMoves.size() == 1);
+        CHECK(recentMoves.front() == QStringLiteral("move-50"));
+        CHECK(database.getGameMoves(userId, gameId, &recentMoves, &error));
+        CHECK(recentMoves.isEmpty());
+        CHECK(database.getUserStatistics(userId, &metrics, &error));
+        CHECK(metrics.totalGames == 50);
     }
 
     // Verify that user records and completed game history survive reopening.
