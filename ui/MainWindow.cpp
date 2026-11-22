@@ -7,7 +7,7 @@
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QFrame>
-#include <QMessageBox>
+
 #include <QFuture>
 #include <QtConcurrent/QtConcurrentRun>
 #include <QStatusBar>
@@ -257,12 +257,14 @@ MainWindow::~MainWindow() {
 
 void MainWindow::startNewGame() {
     if (aiThinking_) return;
-    if (gameResult_ == QStringLiteral("in_progress") && !historyMoves_.empty()) {
-        const auto answer = QMessageBox::question(this, QStringLiteral("Новая партия"),
-            QStringLiteral("Текущая партия ещё не завершена. Начать новую и отметить её как прерванную?"),
-            QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
-        if (answer != QMessageBox::Yes) return;
+    if (gameResult_ == QStringLiteral("in_progress") && !historyMoves_.empty() && !abandonConfirmed_) {
+        showInlinePrompt(QStringLiteral("Начать новую партию?"),
+            QStringLiteral("Текущая партия ещё не завершена. Если продолжить, она будет отмечена как прерванная."),
+            QStringLiteral("Начать новую"), QStringLiteral("Остаться в партии"),
+            [this](bool accepted) { if (accepted) { abandonConfirmed_ = true; startNewGame(); } });
+        return;
     }
+    abandonConfirmed_ = false;
     if (gameId_ >= 0 && gameResult_ == QStringLiteral("in_progress")) {
         QString ignored;
         database_.finishGame(gameId_, QStringLiteral("abandoned"), &ignored);
@@ -276,7 +278,7 @@ void MainWindow::startNewGame() {
     gameId_ = -1;
     if (userId_ >= 0) {
         gameId_ = database_.createGame(userId_, static_cast<int>(humanSide_), difficulty_->currentData().toInt(), &dbError);
-        if (gameId_ < 0) QMessageBox::warning(this, QStringLiteral("База данных"), dbError);
+        if (gameId_ < 0) showInlineMessage(QStringLiteral("База данных"), dbError);
     }
     refresh(); if(sideToMove_!=humanSide_) beginComputerTurn();
 }
@@ -336,8 +338,8 @@ void MainWindow::finishMove(const Move& move, bool animate) {
     if (gameId_ >= 0) {
         QString dbError;
         if (!database_.appendMove(gameId_, nextPly, notation, &dbError)) {
-            QMessageBox::warning(this, QStringLiteral("Не удалось сохранить ход"),
-                                 QStringLiteral("Ход не выполнен, потому что его не удалось записать в базу данных.\n\n%1").arg(dbError));
+            showInlineMessage(QStringLiteral("Не удалось сохранить ход"),
+                QStringLiteral("Ход не выполнен, потому что его не удалось записать в базу данных.\n\n%1").arg(dbError));
             return;
         }
     }
@@ -346,8 +348,8 @@ void MainWindow::finishMove(const Move& move, bool animate) {
     if (!board_.makeMove(move, undo)) {
         // This should be unreachable for a move generated from the current board.
         // If it happens, surface the consistency problem rather than continuing.
-        QMessageBox::critical(this, QStringLiteral("Ошибка игровой логики"),
-                              QStringLiteral("Не удалось применить допустимый ход. Перезапустите партию."));
+        showInlineMessage(QStringLiteral("Ошибка игровой логики"),
+            QStringLiteral("Не удалось применить допустимый ход. Перезапустите партию."));
         return;
     }
     playMoveSound(move.isCapture);
@@ -381,8 +383,8 @@ void MainWindow::finishMove(const Move& move, bool animate) {
         if (gameId_ >= 0) {
             QString error;
             if (!database_.finishGame(gameId_, gameResult_, &error))
-                QMessageBox::warning(this, QStringLiteral("База данных"),
-                                     QStringLiteral("Партия завершена, но результат не удалось сохранить:\n%1").arg(error));
+                showInlineMessage(QStringLiteral("База данных"),
+                    QStringLiteral("Партия завершена, но результат не удалось сохранить:\n%1").arg(error));
         }
         if (gameResult_ == QStringLiteral("win")) { if (soundsEnabled_) victorySound_->play(); }
         else if (gameResult_ == QStringLiteral("loss")) { if (soundsEnabled_) defeatSound_->play(); }
@@ -390,7 +392,7 @@ void MainWindow::finishMove(const Move& move, bool animate) {
         const QString resultText = gameResult_ == QStringLiteral("win") ? QStringLiteral("Вы победили!")
             : gameResult_ == QStringLiteral("loss") ? QStringLiteral("Партия завершилась поражением.")
             : QStringLiteral("Партия завершилась вничью.");
-        QMessageBox::information(this, QStringLiteral("Партия завершена"), resultText);
+        showInlineMessage(QStringLiteral("Партия завершена"), resultText);
     } else if (sideToMove_ != humanSide_) {
         beginComputerTurn();
     } else if (!animate) {
@@ -416,7 +418,7 @@ void MainWindow::onAiFinished() {
         if (gameId_ >= 0) { QString error; database_.finishGame(gameId_, gameResult_, &error); }
         if (soundsEnabled_) victorySound_->play();
         boardView_->setInteractionEnabled(false);
-        QMessageBox::information(this, QStringLiteral("Партия завершена"), QStringLiteral("Компьютер не может сделать ход. Вы победили!"));
+        showInlineMessage(QStringLiteral("Партия завершена"), QStringLiteral("Компьютер не может сделать ход. Вы победили!"));
         return;
     }
     stats_->setText(QString("Глубина: %1\nУзлы: %2\nВремя: %3 мс\nСкорость: %4 уз/с")
@@ -619,20 +621,91 @@ void MainWindow::showHome() {
     pages_->setCurrentWidget(homePage_);
 }
 
+void MainWindow::showInlineMessage(const QString& title, const QString& message) {
+    showInlinePrompt(title, message, QStringLiteral("Понятно"), QString(), [](bool) {});
+}
+
+void MainWindow::showInlinePrompt(const QString& title, const QString& message,
+                                  const QString& acceptText, const QString& cancelText,
+                                  std::function<void(bool)> callback) {
+    if (messagePage_) {
+        pages_->removeWidget(messagePage_);
+        messagePage_->deleteLater();
+        messagePage_ = nullptr;
+    }
+    messageReturnPage_ = pages_->currentWidget();
+    messagePage_ = new QWidget(pages_);
+    messagePage_->setObjectName("appBackground");
+    auto* outer = new QVBoxLayout(messagePage_);
+    outer->setContentsMargins(48, 36, 48, 36);
+    outer->addStretch(1);
+
+    auto* card = new QFrame(messagePage_);
+    card->setObjectName("sidePanel");
+    card->setMaximumWidth(620);
+    auto* layout = new QVBoxLayout(card);
+    layout->setContentsMargins(34, 30, 34, 30);
+    layout->setSpacing(18);
+
+    auto* eyebrow = new QLabel(QStringLiteral("RUSSIAN CHECKERS  /  СООБЩЕНИЕ"), card);
+    eyebrow->setObjectName("brand");
+    auto* heading = new QLabel(title, card);
+    heading->setObjectName("title");
+    heading->setWordWrap(true);
+    auto* body = new QLabel(message, card);
+    body->setObjectName("muted");
+    body->setWordWrap(true);
+    body->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    body->setMinimumWidth(280);
+
+    auto* actions = new QHBoxLayout;
+    actions->addStretch(1);
+    auto* accept = new QPushButton(acceptText, card);
+    accept->setObjectName("primary");
+    actions->addWidget(accept);
+    QPushButton* cancel = nullptr;
+    if (!cancelText.isEmpty()) {
+        cancel = new QPushButton(cancelText, card);
+        cancel->setObjectName("secondary");
+        actions->insertWidget(0, cancel);
+    }
+
+    layout->addWidget(eyebrow);
+    layout->addWidget(heading);
+    layout->addWidget(body);
+    layout->addSpacing(8);
+    layout->addLayout(actions);
+    outer->addWidget(card, 0, Qt::AlignHCenter);
+    outer->addStretch(1);
+    pages_->addWidget(messagePage_);
+    pages_->setCurrentWidget(messagePage_);
+
+    auto finish = [this, callback](bool accepted) {
+        QWidget* returnPage = messageReturnPage_ ? messageReturnPage_ : homePage_;
+        QWidget* page = messagePage_;
+        messagePage_ = nullptr;
+        messageReturnPage_ = nullptr;
+        if (page) {
+            pages_->setCurrentWidget(returnPage);
+            pages_->removeWidget(page);
+            page->deleteLater();
+        }
+        if (callback) callback(accepted);
+    };
+    connect(accept, &QPushButton::clicked, this, [finish] { finish(true); });
+    if (cancel) connect(cancel, &QPushButton::clicked, this, [finish] { finish(false); });
+}
+
 void MainWindow::showStatistics() {
     if (userId_ < 0) {
-        QMessageBox::information(this, QStringLiteral("Статистика"),
+        showInlineMessage(QStringLiteral("Статистика"),
             QStringLiteral("В гостевом режиме статистика не сохраняется. Войдите в аккаунт, чтобы вести историю партий."));
         return;
     }
     QString error;
     const QString report = database_.userStatistics(userId_, &error);
-    QMessageBox box(this);
-    box.setWindowTitle(QStringLiteral("Моя статистика"));
-    box.setText(QStringLiteral("Статистика игрока  ·  %1").arg(username_));
-    box.setInformativeText(report);
-    box.setIcon(QMessageBox::Information);
-    box.exec();
+    showInlineMessage(QStringLiteral("Моя статистика · %1").arg(username_),
+        error.isEmpty() ? report : error);
 }
 
 void MainWindow::exportProtocol() {
@@ -641,6 +714,6 @@ void MainWindow::exportProtocol() {
     if (path.isEmpty()) return;
     QString error;
     if (!database_.saveProtocol(path, username_, protocol_, gameResult_, &error))
-        QMessageBox::warning(this, QStringLiteral("Экспорт не выполнен"), error);
-    else QMessageBox::information(this, QStringLiteral("Экспорт"), QStringLiteral("Протокол сохранён."));
+        showInlineMessage(QStringLiteral("Экспорт не выполнен"), error);
+    else showInlineMessage(QStringLiteral("Экспорт"), QStringLiteral("Протокол сохранён."));
 }
