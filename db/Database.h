@@ -15,6 +15,7 @@ struct RecentGameRecord {
     int difficulty{0};
     QString result;
     qint64 moveCount{0};
+    bool isFavorite{false};
 };
 
 struct UserStatistics {
@@ -48,6 +49,7 @@ public:
     bool getUserStatistics(qint64 userId, UserStatistics* statistics, QString* error = nullptr) const;
     bool getRecentGames(qint64 userId, QList<RecentGameRecord>* games, QString* error = nullptr) const;
     bool getGameMoves(qint64 userId, qint64 gameId, QStringList* moves, QString* error = nullptr) const;
+    bool setGameFavorite(qint64 userId, qint64 gameId, bool favorite, QString* error = nullptr);
     QString userStatistics(qint64 userId, QString* error = nullptr) const;
     bool saveProtocol(const QString& filePath, const QString& username,
                       const QStringList& moves, const QString& result, QString* error = nullptr) const;
