@@ -47,7 +47,12 @@ int main(int argc, char* argv[]) {
         Database reopened;
         QString error;
         CHECK(reopened.open(databasePath, &error));
-        CHECK(reopened.authenticate(QStringLiteral("Tester"), QStringLiteral("correct-horse-battery"), &error) == userId);
+        const qint64 reopenedUserId = reopened.authenticate(
+            QStringLiteral("Tester"), QStringLiteral("correct-horse-battery"), &error);
+        if (reopenedUserId != userId)
+            std::cerr << "Reopened login failed: id=" << reopenedUserId
+                      << ", expected=" << userId << ", error=" << error.toStdString() << '\\n';
+        CHECK(reopenedUserId == userId);
         const QString statistics = reopened.userStatistics(userId, &error);
         CHECK(statistics.contains(QStringLiteral("Всего партий: 1")));
         CHECK(statistics.contains(QStringLiteral("Победы: 1")));
