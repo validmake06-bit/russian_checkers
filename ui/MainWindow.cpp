@@ -253,7 +253,9 @@ MainWindow::MainWindow(Database& database, qint64 userId, QString username, QWid
     if (musicEnabled_) musicPlayer_->play();
     applyTheme(darkTheme_);
     connect(boardView_, &BoardWidget::animationFinished, this, [this] {
-        if (!aiThinking_ && sideToMove_ == humanSide_ && !gameOver()) refresh();
+        if (aiThinking_ || gameOver()) return;
+        if (sideToMove_ == humanSide_) refresh();
+        else beginComputerTurn();
     });
 }
 
@@ -402,9 +404,9 @@ void MainWindow::finishMove(const Move& move, bool animate) {
             : gameResult_ == QStringLiteral("loss") ? QStringLiteral("Партия завершилась поражением.")
             : QStringLiteral("Партия завершилась вничью.");
         showInlineMessage(QStringLiteral("Партия завершена"), resultText);
-    } else if (sideToMove_ != humanSide_) {
+    } else if (sideToMove_ != humanSide_ && !animate) {
         beginComputerTurn();
-    } else if (!animate) {
+    } else if (sideToMove_ == humanSide_ && !animate) {
         refresh();
     }
 }
