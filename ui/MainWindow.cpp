@@ -1041,12 +1041,14 @@ void MainWindow::openSettings() {
         settingsPage_ = new CheckersBackdrop(pages_);
         settingsPage_->setProperty("darkTheme", darkTheme_);
         auto* outer = new QVBoxLayout(settingsPage_);
-        outer->setContentsMargins(28, 22, 28, 22);
-        outer->addStretch(1);
+        outer->setContentsMargins(16, 14, 16, 14);
+        outer->setSpacing(0);
 
         auto* card = new QFrame(settingsPage_);
         card->setObjectName("settingsCard");
+        card->setMinimumWidth(0);
         card->setMaximumWidth(760);
+        card->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Minimum);
         auto* cardLayout = new QVBoxLayout(card);
         cardLayout->setContentsMargins(30, 26, 30, 26);
         cardLayout->setSpacing(16);
@@ -1086,21 +1088,23 @@ void MainWindow::openSettings() {
         auto makeRow = [](QVBoxLayout* layout, const QString& title,
                           const QString& hint, QWidget* control) {
             auto* row = new QWidget;
-            auto* rowLayout = new QHBoxLayout(row);
-            rowLayout->setContentsMargins(0, 4, 0, 4);
-            rowLayout->setSpacing(18);
-            auto* labels = new QVBoxLayout;
-            labels->setSpacing(3);
+            row->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
+            auto* rowLayout = new QVBoxLayout(row);
+            rowLayout->setContentsMargins(0, 5, 0, 5);
+            rowLayout->setSpacing(5);
             auto* name = new QLabel(title, row);
             name->setObjectName("settingsRowTitle");
+            name->setWordWrap(true);
             auto* detail = new QLabel(hint, row);
             detail->setObjectName("settingsRowHint");
             detail->setWordWrap(true);
-            labels->addWidget(name);
-            labels->addWidget(detail);
-            rowLayout->addLayout(labels, 1);
-            control->setMinimumWidth(220);
-            rowLayout->addWidget(control, 0, Qt::AlignVCenter);
+            detail->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
+            rowLayout->addWidget(name);
+            rowLayout->addWidget(detail);
+            control->setMinimumWidth(0);
+            control->setMaximumWidth(QWIDGETSIZE_MAX);
+            control->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+            rowLayout->addWidget(control);
             layout->addWidget(row);
         };
         auto makeSliderControl = [](QSlider* slider, QLabel* value) {
@@ -1108,7 +1112,8 @@ void MainWindow::openSettings() {
             auto* line = new QHBoxLayout(wrapper);
             line->setContentsMargins(0, 0, 0, 0);
             line->setSpacing(10);
-            slider->setMinimumWidth(150);
+            slider->setMinimumWidth(0);
+            slider->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
             value->setObjectName("settingsValue");
             value->setMinimumWidth(48);
             value->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
@@ -1191,8 +1196,13 @@ void MainWindow::openSettings() {
         cardLayout->addSpacing(2);
         cardLayout->addLayout(actions);
 
-        outer->addWidget(card, 0, Qt::AlignHCenter);
-        outer->addStretch(1);
+        auto* scroll = new QScrollArea(settingsPage_);
+        scroll->setObjectName("settingsScroll");
+        scroll->setWidgetResizable(true);
+        scroll->setFrameShape(QFrame::NoFrame);
+        scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        scroll->setWidget(card);
+        outer->addWidget(scroll, 1);
         pages_->addWidget(settingsPage_);
 
         addButtonFeedback(back, buttonSound_);
