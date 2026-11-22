@@ -73,13 +73,13 @@ ctest --test-dir build --output-on-failure
 
 Windows: `build\\russian_checkers.exe`.
 
-При первом запуске откроется окно регистрации/входа. Создайте пользователя (имя 3–32 символа, пароль от 8 символов), затем войдите. База `checkers.sqlite` располагается в стандартной пользовательской папке данных приложения Qt.
+При первом запуске в главном окне откроется страница входа. Можно войти, перейти на отдельную страницу регистрации или продолжить как гость. Имя пользователя — 3–32 символа, пароль — от 8 символов. База `checkers.sqlite` располагается в стандартной пользовательской папке данных приложения Qt.
 
 ## Структура
 
 ```text
 core/   — доска, генератор ходов, AI
-ui/     — Qt Widgets, доска и окно авторизации
+ui/     — Qt Widgets, главное окно, встроенные страницы авторизации и игровая доска
  db/    — SQLite: users, games, moves
  tests/ — тесты игрового ядра
 ```
@@ -92,7 +92,7 @@ ui/     — Qt Widgets, доска и окно авторизации
 - `Board::makeMove` предварительно проверяет целостность структуры хода и не изменяет позицию при некорректных данных.
 - Поиск ИИ использует лучший ход предыдущей итерации как приоритетный вариант следующего прохода, улучшая эффективность alpha-beta.
 - История партий хранится в базе, но отдельный экран просмотра и восстановление незаконченной позиции ещё не реализованы.
-- Qt Multimedia подключён как обязательный модуль для следующей части звукового оформления; звуковые эффекты пока не реализованы.
+- Звуковые эффекты ходов/взятий и фоновая музыка доступны; эффекты и музыка настраиваются независимо.
 
 ## UI refresh (Stage 5)
 
@@ -149,3 +149,16 @@ g++ -std=c++17 -O2 -Wall -Wextra -Wpedantic -Icore core/Board.cpp core/AI.cpp te
 - После регистрации приложение сразу проверяет созданную запись тем же механизмом, что и обычный вход, и открывает игру только при успешной проверке.
 - Вход допускает разный регистр имени пользователя; для старых записей предусмотрена попытка совместимого чтения прежнего формата хеша с последующим обновлением.
 - «Продолжить как гость» запускает игру без создания аккаунта. В гостевом режиме партии не записываются в профиль и статистика недоступна; экспорт текущего протокола в TXT остаётся доступен.
+
+
+## Stage 9 — Complete in-app UI and animation polish
+
+- Login, registration and guest access are now pages inside the main application window; there is no separate authentication dialog.
+- Settings, confirmations, statistics and game notifications are displayed inside the same main window and follow the active light/dark theme.
+- Move animations can be disabled or adjusted from Settings. Multi-captures play as separate jumps: the captured checker remains visible until the attacker lands, then fades before the next jump.
+- Computer turns wait for the current move animation to finish. Resetting the board cancels any stale animation.
+- Theme, sound, music and animation preferences are persisted with QSettings.
+- Added SQLite tests for registration, case-insensitive authentication, incorrect passwords, saved game history, statistics and protocol export.
+- Added a GitHub Actions workflow that builds the Qt 6 application and runs CTest on Ubuntu.
+
+The Qt GUI and database test suite must still complete a successful CI run and be checked in the Windows Qt Creator / MinGW kit before this build can be considered fully verified. The file export destination picker remains a native operating-system file chooser.
