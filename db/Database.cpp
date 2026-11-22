@@ -74,6 +74,18 @@ bool Database::initializeSchema(QString* error) {
             return false;
         }
     }
+
+    // Apply the retention policy to databases upgraded from older versions too.
+    QSqlQuery pruneExisting(db_);
+    if (!pruneExisting.exec(QStringLiteral(
+        "DELETE FROM games WHERE finished_at IS NOT NULL AND id IN ("
+        " SELECT old.id FROM games old WHERE old.finished_at IS NOT NULL "
+        " AND old.id NOT IN (SELECT recent.id FROM games recent "
+        " WHERE recent.user_id=old.user_id AND recent.finished_at IS NOT NULL "
+        " ORDER BY recent.finished_at DESC, recent.id DESC LIMIT 50))"))) {
+        if (error) *error = pruneExisting.lastError().text();
+        return false;
+    }
     return true;
 }
 
