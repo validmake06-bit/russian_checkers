@@ -241,6 +241,20 @@ bool Database::finishGame(qint64 gameId, const QString& result, QString* error) 
         if (error) *error = QStringLiteral("Партия не найдена в базе данных.");
         return false;
     }
+
+    // Keep only the 50 most recent finished records per account. Active games
+    // are never pruned, and ON DELETE CASCADE removes their move rows as well.
+    QSqlQuery prune(db_);
+    prune.prepare(QStringLiteral(
+        "DELETE FROM games WHERE id IN ("
+        " SELECT id FROM games WHERE user_id=(SELECT user_id FROM games WHERE id=?) "
+        " AND finished_at IS NOT NULL "
+        " ORDER BY finished_at DESC, id DESC LIMIT -1 OFFSET 50)"));
+    prune.addBindValue(gameId);
+    if (!prune.exec()) {
+        if (error) *error = prune.lastError().text();
+        return false;
+    }
     return true;
 }
 
@@ -306,6 +320,59 @@ bool Database::getUserStatistics(qint64 userId, UserStatistics* statistics, QStr
         statistics->mostPlayedDifficulty = 0;
         statistics->mostPlayedDifficultyGames = 0;
     }
+    return true;
+}
+
+bool Database::getRecentGames(qint64 userId, QList<RecentGameRecord>* games, QString* error) const {
+    if (userId <= 0 || !games) {
+        if (error) *error = QStringLiteral("Некорректный пользователь для истории партий.");
+        return false;
+    }
+    games->clear();
+    QSqlQuery query(db_);
+    query.prepare(QStringLiteral(
+        "SELECT g.id, g.started_at, COALESCE(g.finished_at, ''), g.human_side, "
+        "g.difficulty, g.result, COUNT(m.id) "
+        "FROM games g LEFT JOIN moves m ON m.game_id=g.id "
+        "WHERE g.user_id=? GROUP BY g.id "
+        "ORDER BY g.started_at DESC, g.id DESC LIMIT 50"));
+    query.addBindValue(userId);
+    if (!query.exec()) {
+        if (error) *error = query.lastError().text();
+        return false;
+    }
+    while (query.next()) {
+        RecentGameRecord record;
+        record.id = query.value(0).toLongLong();
+        record.startedAt = query.value(1).toString();
+        record.finishedAt = query.value(2).toString();
+        record.humanSide = query.value(3).toInt();
+        record.difficulty = query.value(4).toInt();
+        record.result = query.value(5).toString();
+        record.moveCount = query.value(6).toLongLong();
+        games->push_back(record);
+    }
+    return true;
+}
+
+bool Database::getGameMoves(qint64 userId, qint64 gameId, QStringList* moves, QString* error) const {
+    if (userId <= 0 || gameId <= 0 || !moves) {
+        if (error) *error = QStringLiteral("Некорректные параметры просмотра партии.");
+        return false;
+    }
+    moves->clear();
+    QSqlQuery query(db_);
+    query.prepare(QStringLiteral(
+        "SELECT m.notation FROM moves m "
+        "INNER JOIN games g ON g.id=m.game_id "
+        "WHERE g.id=? AND g.user_id=? ORDER BY m.ply"));
+    query.addBindValue(gameId);
+    query.addBindValue(userId);
+    if (!query.exec()) {
+        if (error) *error = query.lastError().text();
+        return false;
+    }
+    while (query.next()) moves->push_back(query.value(0).toString());
     return true;
 }
 
