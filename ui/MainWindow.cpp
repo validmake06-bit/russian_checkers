@@ -1089,6 +1089,17 @@ void MainWindow::showInlinePrompt(const QString& title, const QString& message,
     QWidget* returnPage = (messagePage_ && messageReturnPage_)
         ? messageReturnPage_ : pages_->currentWidget();
     if (messagePage_) {
+        // A prompt can replace another prompt while its fade is still running.
+        // Detach the animation before scheduling that page for deletion.
+        if (pageTransition_ && transitionTarget_ == messagePage_) {
+            pageTransition_->stop();
+            if (messagePage_->graphicsEffect() == transitionEffect_)
+                messagePage_->setGraphicsEffect(nullptr);
+            pageTransition_->deleteLater();
+            pageTransition_ = nullptr;
+            transitionTarget_ = nullptr;
+            transitionEffect_ = nullptr;
+        }
         pages_->removeWidget(messagePage_);
         messagePage_->deleteLater();
         messagePage_ = nullptr;
