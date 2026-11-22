@@ -13,6 +13,7 @@ public:
     explicit AuthDialog(Database& database, QWidget* parent = nullptr);
     qint64 userId() const noexcept { return userId_; }
     QString username() const { return username_; }
+    void openLoginPage();
 signals:
     void authenticated(qint64 userId, const QString& username);
 private slots:
