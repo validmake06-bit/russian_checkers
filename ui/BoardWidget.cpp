@@ -168,15 +168,25 @@ void BoardWidget::drawPiece(QPainter& painter, const QPointF& center, bool white
     painter.restore();
 }
 void BoardWidget::paintEvent(QPaintEvent*) {
-    QPainter p(this); p.setRenderHint(QPainter::Antialiasing);
-    p.fillRect(rect(), darkTheme_ ? QColor("#241812") : QColor("#f4eadc"));
+    QPainter p(this);
+    p.setRenderHint(QPainter::Antialiasing);
     const qreal side = qMin(width(), height()) - 68.0, cell = side / 8.0;
     const qreal left = (width() - side) / 2.0, top = (height() - side) / 2.0;
+    const qreal dpr = devicePixelRatioF();
+    if (cachedSurfaceSize_ != size() || qAbs(cachedSurfaceDpr_ - dpr) > 0.01
+        || cachedDarkTheme_ != darkTheme_ || backgroundCache_.isNull()) {
+        backgroundCache_ = QPixmap(QSize(qMax(1, qRound(width() * dpr)),
+                                         qMax(1, qRound(height() * dpr))));
+        backgroundCache_.setDevicePixelRatio(dpr);
+        backgroundCache_.fill(darkTheme_ ? QColor("#241812") : QColor("#f4eadc"));
+        QPainter surface(&backgroundCache_);
+        surface.setRenderHint(QPainter::Antialiasing);
+
     // Layered walnut frame with a restrained inset highlight.
-    p.save();
-    p.setPen(Qt::NoPen);
-    p.setBrush(QColor(0, 0, 0, darkTheme_ ? 95 : 35));
-    p.drawRoundedRect(QRectF(left - 11, top - 8, side + 22, side + 22), 16, 16);
+    surface.save();
+    surface.setPen(Qt::NoPen);
+    surface.setBrush(QColor(0, 0, 0, darkTheme_ ? 95 : 35));
+    surface.drawRoundedRect(QRectF(left - 11, top - 8, side + 22, side + 22), 16, 16);
     QLinearGradient frame(left, top - 10, left + side, top + side + 10);
     if (darkTheme_) {
         frame.setColorAt(0.0, QColor("#9a704b"));
@@ -187,13 +197,13 @@ void BoardWidget::paintEvent(QPaintEvent*) {
         frame.setColorAt(0.5, QColor("#8b6243"));
         frame.setColorAt(1.0, QColor("#60432f"));
     }
-    p.setBrush(frame);
-    p.setPen(QPen(darkTheme_ ? QColor("#b88b61") : QColor("#d4b28d"), 1.0));
-    p.drawRoundedRect(QRectF(left - 8, top - 8, side + 16, side + 16), 12, 12);
-    p.setPen(QPen(QColor(255, 245, 225, darkTheme_ ? 42 : 90), 1.0));
-    p.setBrush(Qt::NoBrush);
-    p.drawRoundedRect(QRectF(left - 4, top - 4, side + 8, side + 8), 8, 8);
-    p.restore();
+    surface.setBrush(frame);
+    surface.setPen(QPen(darkTheme_ ? QColor("#b88b61") : QColor("#d4b28d"), 1.0));
+    surface.drawRoundedRect(QRectF(left - 8, top - 8, side + 16, side + 16), 12, 12);
+    surface.setPen(QPen(QColor(255, 245, 225, darkTheme_ ? 42 : 90), 1.0));
+    surface.setBrush(Qt::NoBrush);
+    surface.drawRoundedRect(QRectF(left - 4, top - 4, side + 8, side + 8), 8, 8);
+    surface.restore();
 
     // Individually shaded squares create a subtle, tactile board surface.
     for (int r=0;r<8;++r) for (int c=0;c<8;++c) {
@@ -216,27 +226,34 @@ void BoardWidget::paintEvent(QPaintEvent*) {
                 squareGradient.setColorAt(1.0, QColor("#e8e9df"));
             }
         }
-        p.fillRect(sq, squareGradient);
-        p.setPen(QPen(QColor(60, 42, 28, darkTheme_ ? 24 : 18), 0.6));
-        p.drawRect(sq);
+        surface.fillRect(sq, squareGradient);
+        surface.setPen(QPen(QColor(60, 42, 28, darkTheme_ ? 24 : 18), 0.6));
+        surface.drawRect(sq);
     }
 
     // Small coordinate marks sit in the board's quiet outer margin. They make
     // analysis and move discussion easier while keeping the playing surface clean.
-    QFont coordinateFont = p.font();
+    QFont coordinateFont = surface.font();
     coordinateFont.setPointSize(8);
     coordinateFont.setWeight(QFont::DemiBold);
     coordinateFont.setLetterSpacing(QFont::AbsoluteSpacing, 0.7);
-    p.setFont(coordinateFont);
-    p.setPen(darkTheme_ ? QColor("#d9c1a4") : QColor("#80664d"));
+    surface.setFont(coordinateFont);
+    surface.setPen(darkTheme_ ? QColor("#d9c1a4") : QColor("#80664d"));
     for (int index = 0; index < 8; ++index) {
         const QString rank = QString::number(8 - index);
         const QString file = QStringLiteral("abcdefgh").mid(index, 1);
-        p.drawText(QRectF(left - 28, top + index * cell, 18, cell),
+        surface.drawText(QRectF(left - 28, top + index * cell, 18, cell),
                    Qt::AlignCenter, rank);
-        p.drawText(QRectF(left + index * cell, top + side + 10, cell, 18),
+        surface.drawText(QRectF(left + index * cell, top + side + 10, cell, 18),
                    Qt::AlignCenter, file);
     }
+
+        surface.end();
+        cachedSurfaceSize_ = size();
+        cachedSurfaceDpr_ = dpr;
+        cachedDarkTheme_ = darkTheme_;
+    }
+    p.drawPixmap(0, 0, backgroundCache_);
 
     if (selectedSquare_ >= 0) {
         const QPointF center = squareCenter(selectedSquare_);
