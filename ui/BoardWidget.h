@@ -3,6 +3,7 @@
 #include <QWidget>
 #include <QPointF>
 #include <QVariantAnimation>
+#include <QPixmap>
 #include <vector>
 #include <array>
 
@@ -70,4 +71,8 @@ private:
     checkers::Piece movingPiece_{checkers::Piece::Empty};
     std::array<checkers::Piece, checkers::MaxCaptures> capturedPieces_{};
     int animationSegment_{0};
+    QPixmap backgroundCache_;
+    QSize cachedSurfaceSize_;
+    qreal cachedSurfaceDpr_{0.0};
+    bool cachedDarkTheme_{false};
 };
