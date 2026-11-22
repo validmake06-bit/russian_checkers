@@ -39,6 +39,26 @@ BoardWidget::BoardWidget(QWidget* parent) : QWidget(parent) {
         fadingCount_ = 0;
         advanceAnimationSequence();
     });
+    landingAnimation_.setDuration(190);
+    landingAnimation_.setEasingCurve(QEasingCurve::OutCubic);
+    landingAnimation_.setKeyValueAt(0.0, 0.94);
+    landingAnimation_.setKeyValueAt(0.58, 1.07);
+    landingAnimation_.setEndValue(1.0);
+    connect(&landingAnimation_, &QVariantAnimation::valueChanged, this, [this](const QVariant& value) {
+        landingScale_ = value.toReal();
+        update();
+    });
+    connect(&landingAnimation_, &QVariantAnimation::finished, this, [this] {
+        landingPulseRunning_ = false;
+        animating_ = false;
+        animatedSquare_ = -1;
+        fadingCount_ = 0;
+        movingPiece_ = Piece::Empty;
+        captureOpacity_ = 0.0;
+        landingScale_ = 1.0;
+        update();
+        emit animationFinished();
+    });
 }
 
 void BoardWidget::setPosition(const Board& board, Side side, const std::vector<Move>& moves) {
@@ -47,6 +67,9 @@ void BoardWidget::setPosition(const Board& board, Side side, const std::vector<M
     if (animating_) {
         animation_.stop();
         captureAnimation_.stop();
+        landingAnimation_.stop();
+        landingPulseRunning_ = false;
+        landingScale_ = 1.0;
         animating_ = false;
         animatedSquare_ = -1;
         fadingCount_ = 0;
@@ -253,7 +276,7 @@ void BoardWidget::paintEvent(QPaintEvent*) {
     }
     if (animating_ && animatedSquare_>=0) {
         // Render the moving piece at the interpolated position, not at its final square.
-        drawPiece(p,animatedPosition_,isWhite(movingPiece_),isKing(movingPiece_),cell*.37);
+        drawPiece(p,animatedPosition_,isWhite(movingPiece_),isKing(movingPiece_),cell*.37*landingScale_);
     }
 }
 
@@ -277,7 +300,7 @@ void BoardWidget::startAnimationSegment() {
     animatedPosition_ = from;
     animatedSquare_ = animatedMove_.to();
     animation_.stop();
-    const int baseDuration = animatedMove_.isCapture ? 235 : 210;
+    const int baseDuration = animatedMove_.isCapture ? 285 : 255;
     animation_.setDuration(qMax(1, baseDuration * 100 / animationSpeedPercent_));
     animation_.setStartValue(from);
     animation_.setEndValue(to);
@@ -295,13 +318,21 @@ void BoardWidget::advanceAnimationSequence() {
 }
 
 void BoardWidget::finishAnimationSequence() {
-    animating_ = false;
-    animatedSquare_ = -1;
-    fadingCount_ = 0;
-    movingPiece_ = Piece::Empty;
-    captureOpacity_ = 0.0;
-    update();
-    emit animationFinished();
+    if (!landingPulseRunning_) {
+        // A short, restrained rebound gives the completed move a tactile landing.
+        // Promotion is revealed here, when the checker actually reaches its crown row.
+        landingPulseRunning_ = true;
+        movingPiece_ = finalPiece_;
+        animatedSquare_ = animatedMove_.to();
+        animatedPosition_ = squareCenter(animatedMove_.to());
+        fadingCount_ = 0;
+        captureOpacity_ = 0.0;
+        landingAnimation_.stop();
+        landingAnimation_.setDuration(qMax(1, 190 * 100 / animationSpeedPercent_));
+        landingAnimation_.start();
+        update();
+        return;
+    }
 }
 
 void BoardWidget::animateMove(const Move& move, const Board& resultingBoard) {
@@ -312,6 +343,8 @@ void BoardWidget::animateMove(const Move& move, const Board& resultingBoard) {
         animatedSquare_ = -1;
         fadingCount_ = 0;
         movingPiece_ = Piece::Empty;
+        finalPiece_ = Piece::Empty;
+        landingScale_ = 1.0;
         update();
         emit animationFinished();
         return;
@@ -325,6 +358,10 @@ void BoardWidget::animateMove(const Move& move, const Board& resultingBoard) {
     }
 
     animatedMove_ = move;
+    finalPiece_ = resultingBoard.at(move.to());
+    landingScale_ = 1.0;
+    landingPulseRunning_ = false;
+    landingAnimation_.stop();
     animationSegment_ = 0;
     fadingCount_ = 0;
     capturedPieces_.fill(Piece::Empty);
