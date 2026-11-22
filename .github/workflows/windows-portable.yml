@@ -36,7 +36,7 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path dist | Out-Null
           Copy-Item build/russian_checkers.exe dist/RussianCheckers.exe
-          windeployqt --release --compiler-runtime --multimedia --sql --dir dist dist/RussianCheckers.exe
+          windeployqt --release --compiler-runtime --dir dist dist/RussianCheckers.exe
           New-Item -ItemType Directory -Force -Path dist/sqldrivers | Out-Null
           $qtRoot = $env:QT_ROOT_DIR
           $sqlitePlugin = Get-ChildItem -Path $qtRoot -Filter qsqlite.dll -Recurse | Select-Object -First 1
