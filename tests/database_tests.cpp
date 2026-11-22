@@ -71,6 +71,8 @@ int main(int argc, char* argv[]) {
         CHECK(QString::fromUtf8(protocol.readAll()).contains(QStringLiteral("a3-b4")));
         credentialBeforeClose = credentialSnapshot(databasePath);
         CHECK(!credentialBeforeClose.isEmpty());
+        CHECK(database.authenticate(QStringLiteral("Tester"),
+                                    QStringLiteral("correct-horse-battery"), &error) == userId);
     }
 
     // Verify that user records and completed game history survive reopening.
