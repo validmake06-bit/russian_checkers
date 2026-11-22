@@ -1540,7 +1540,7 @@ void MainWindow::showReplay(qint64 replayGameId, const QString& gameTitle, QWidg
         });
         if (found == legal.end()) {
             showInlineMessage(QStringLiteral("Не удалось воспроизвести партию"),
-                QStringLiteral("Ход %1 не соответствует правилам или предыдущим ходам:\\n%2")
+                QStringLiteral("Ход %1 не соответствует правилам или предыдущим ходам:\n%2")
                     .arg(ply + 1).arg(notation));
             return;
         }
