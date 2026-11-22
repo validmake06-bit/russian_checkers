@@ -40,6 +40,8 @@
 #include <QFontDatabase>
 #include <QApplication>
 #include <QGraphicsOpacityEffect>
+#include <QShowEvent>
+#include <QHideEvent>
 #include <algorithm>
 #include <cmath>
 
@@ -166,17 +168,17 @@ public:
     explicit CheckersBackdrop(QWidget* parent = nullptr) : QWidget(parent) {
         setObjectName("homeBackground");
         setAttribute(Qt::WA_OpaquePaintEvent);
-        auto* timer = new QTimer(this);
-        timer->setInterval(33);
-        QObject::connect(timer, &QTimer::timeout, this, [this] {
+        timer_.setInterval(33);
+        QObject::connect(&timer_, &QTimer::timeout, this, [this] {
             phase_ += 0.006;
             if (phase_ > 1000.0) phase_ = 0.0;
             update();
         });
-        timer->start();
     }
 
 protected:
+    void showEvent(QShowEvent* event) override { QWidget::showEvent(event); timer_.start(); }
+    void hideEvent(QHideEvent* event) override { timer_.stop(); QWidget::hideEvent(event); }
     void paintEvent(QPaintEvent*) override {
         QPainter p(this);
         p.setRenderHint(QPainter::Antialiasing);
@@ -192,6 +194,10 @@ protected:
             base.setColorAt(1.0, QColor("#e4d0b7"));
         }
         p.fillRect(rect(), base);
+        QRadialGradient ambient(QPointF(width() * 0.76, height() * 0.44), qMax(width(), height()) * 0.62);
+        ambient.setColorAt(0.0, dark ? QColor(198, 151, 105, 38) : QColor(166, 126, 87, 32));
+        ambient.setColorAt(1.0, QColor(0, 0, 0, 0));
+        p.fillRect(rect(), ambient);
 
         // A quiet, oversized board motif gives the menu depth without competing
         // with the controls or creating a high-frequency visual distraction.
@@ -221,18 +227,61 @@ protected:
             const qreal y = height() * (0.18 + 0.105 * (i % 5))
                           + qCos(phase_ * 0.8 + i * 1.3) * 23.0;
             const qreal radius = 13.0 + (i % 3) * 3.0;
-            p.setPen(QPen(QColor(dark ? 224 : 117, dark ? 195 : 84,
-                                 dark ? 157 : 54, dark ? 27 : 30), 1.2));
             QColor pieceColor(dark ? "#d6b38c" : "#80583b");
-            pieceColor.setAlpha(dark ? 13 : 15);
-            p.setBrush(pieceColor);
+            pieceColor.setAlpha(dark ? 27 : 32);
+            QRadialGradient piece(QPointF(x - radius * .3, y - radius * .35), radius * 1.5);
+            QColor highlight = dark ? QColor("#f0d9bb") : QColor("#fffaf1");
+            highlight.setAlpha(dark ? 35 : 70);
+            QColor edge = pieceColor.darker(145);
+            edge.setAlpha(dark ? 34 : 42);
+            piece.setColorAt(0.0, highlight);
+            piece.setColorAt(0.72, pieceColor);
+            piece.setColorAt(1.0, edge);
+            p.setBrush(piece);
+            p.setPen(QPen(QColor(dark ? 224 : 117, dark ? 195 : 84,
+                                 dark ? 157 : 54, dark ? 50 : 65), 1.1));
             p.drawEllipse(QPointF(x, y), radius, radius);
+            p.setBrush(Qt::NoBrush);
+            p.setPen(QPen(QColor(dark ? 255 : 255, dark ? 239 : 255,
+                                 dark ? 220 : 255, dark ? 38 : 75), 1.0));
             p.drawEllipse(QPointF(x, y), radius * 0.68, radius * 0.68);
         }
     }
 
 private:
+    QTimer timer_;
     qreal phase_{0.0};
+};
+
+class WinRateRing final : public QWidget {
+public:
+    explicit WinRateRing(int percent, QWidget* parent = nullptr)
+        : QWidget(parent), percent_(qBound(0, percent, 100)) {
+        setMinimumSize(136, 136);
+        setMaximumSize(148, 148);
+    }
+    void setDarkTheme(bool dark) { dark_ = dark; update(); }
+protected:
+    void paintEvent(QPaintEvent*) override {
+        QPainter p(this);
+        p.setRenderHint(QPainter::Antialiasing);
+        const qreal side = qMin(width(), height()) - 20.0;
+        const QRectF circle((width() - side) / 2.0, (height() - side) / 2.0, side, side);
+        p.setBrush(Qt::NoBrush);
+        p.setPen(QPen(dark_ ? QColor("#3a473e") : QColor("#e6dacb"), 10.0, Qt::SolidLine, Qt::RoundCap));
+        p.drawArc(circle, 90 * 16, -360 * 16);
+        p.setPen(QPen(dark_ ? QColor("#d5a777") : QColor("#8c6444"), 10.0, Qt::SolidLine, Qt::RoundCap));
+        p.drawArc(circle, 90 * 16, -percent_ * 360 * 16 / 100);
+        p.setPen(dark_ ? QColor("#f4eadc") : QColor("#3c3026"));
+        QFont font = p.font();
+        font.setPointSize(22);
+        font.setWeight(QFont::DemiBold);
+        p.setFont(font);
+        p.drawText(rect(), Qt::AlignCenter, QStringLiteral("%1%").arg(percent_));
+    }
+private:
+    int percent_{0};
+    bool dark_{true};
 };
 } // namespace
 
@@ -1026,7 +1075,7 @@ void MainWindow::showHome() {
     if (aiThinking_) return;
     if (homeStart_) homeStart_->setText(!historyMoves_.empty() && gameResult_ == QStringLiteral("in_progress")
         ? QStringLiteral("Продолжить игру") : QStringLiteral("Начать игру"));
-    pages_->setCurrentWidget(homePage_);
+    navigateToPage(homePage_);
 }
 
 void MainWindow::showInlineMessage(const QString& title, const QString& message) {
@@ -1195,19 +1244,29 @@ void MainWindow::showStatistics() {
                            QStringLiteral("За всю историю аккаунта")), 1, 2);
     layout->addLayout(grid);
 
-    auto* rateLabel = new QLabel(QStringLiteral("Доля побед среди завершённых партий"), card);
-    rateLabel->setObjectName("muted");
-    auto* rate = new QProgressBar(card);
-    rate->setRange(0, 100);
-    rate->setValue(data.winRatePercent);
-    rate->setTextVisible(true);
-    rate->setFormat(QStringLiteral("%p%"));
-    rate->setFixedHeight(13);
-    rate->setStyleSheet(darkTheme_
-        ? QStringLiteral("QProgressBar { background:#303b3b; border:0; border-radius:6px; } QProgressBar::chunk { background:#c69a70; border-radius:6px; }")
-        : QStringLiteral("QProgressBar { background:#e6d8c5; border:0; border-radius:6px; } QProgressBar::chunk { background:#8b5a38; border-radius:6px; }"));
-    layout->addWidget(rateLabel);
-    layout->addWidget(rate);
+    auto* ratePanel = new QFrame(card);
+    ratePanel->setObjectName("statHero");
+    auto* rateLayout = new QHBoxLayout(ratePanel);
+    rateLayout->setContentsMargins(18, 12, 22, 12);
+    rateLayout->setSpacing(18);
+    auto* ring = new WinRateRing(data.winRatePercent, ratePanel);
+    ring->setDarkTheme(darkTheme_);
+    rateLayout->addWidget(ring, 0, Qt::AlignVCenter);
+    auto* rateText = new QVBoxLayout;
+    auto* rateTitle = new QLabel(QStringLiteral("Ваш процент побед"), ratePanel);
+    rateTitle->setObjectName("title");
+    auto* rateDescription = new QLabel(
+        completed > 0
+            ? QStringLiteral("%1 побед из %2 завершённых партий").arg(data.wins).arg(completed)
+            : QStringLiteral("Завершите первую партию, чтобы увидеть свой результат."),
+        ratePanel);
+    rateDescription->setObjectName("muted");
+    rateDescription->setWordWrap(true);
+    rateText->addWidget(rateTitle);
+    rateText->addWidget(rateDescription);
+    rateText->addStretch(1);
+    rateLayout->addLayout(rateText, 1);
+    layout->addWidget(ratePanel);
 
     auto* actions = new QHBoxLayout;
     actions->addStretch(1);
@@ -1220,7 +1279,7 @@ void MainWindow::showStatistics() {
     outer->addStretch(1);
 
     pages_->addWidget(page);
-    pages_->setCurrentWidget(page);
+    navigateToPage(page);
     connect(back, &QPushButton::clicked, this, [this, page] {
         navigateToPage(homePage_);
         pages_->removeWidget(page);
