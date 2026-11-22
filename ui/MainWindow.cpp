@@ -1282,7 +1282,7 @@ void MainWindow::showStatistics() {
     eyebrow->setObjectName("brand");
     auto* heading = new QLabel(QStringLiteral("Статистика игрока"), card);
     heading->setObjectName("title");
-    auto* identity = new QLabel(QStringLiteral("%1  ·  статистика последних 50 партий").arg(username_), card);
+    auto* identity = new QLabel(QStringLiteral("%1  ·  статистика по последним сохранённым партиям (до 50)").arg(username_), card);
     identity->setObjectName("muted");
     layout->addWidget(eyebrow);
     layout->addWidget(heading);
@@ -1457,7 +1457,7 @@ void MainWindow::showStatistics() {
     historyScroll->setStyleSheet(QStringLiteral("QScrollArea { background: transparent; border: 0; }"));
     historyScroll->setWidget(card);
     historyScroll->setMaximumWidth(1020);
-    outer->addWidget(historyScroll, 1, Qt::AlignHCenter);
+    outer->addWidget(historyScroll, 1);
 
     pages_->addWidget(page);
     navigateToPage(page);
