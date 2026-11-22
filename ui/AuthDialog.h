@@ -1,6 +1,8 @@
 #pragma once
 
 #include <QWidget>
+class QPropertyAnimation;
+class QGraphicsOpacityEffect;
 
 class Database;
 class QLineEdit;
@@ -24,8 +26,12 @@ private slots:
     void continueAsGuest();
 private:
     void setMessage(QLabel* label, const QString& text, bool success = false);
+    void switchFormPage(int index);
     Database& database_;
     QStackedWidget* pages_{};
+    QPropertyAnimation* pageAnimation_{};
+    QWidget* transitionPage_{};
+    QGraphicsOpacityEffect* pageEffect_{};
     QLineEdit* usernameEdit_{};
     QLineEdit* passwordEdit_{};
     QLabel* loginMessage_{};
