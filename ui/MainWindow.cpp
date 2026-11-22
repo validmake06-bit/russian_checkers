@@ -1427,7 +1427,7 @@ void MainWindow::showStatistics() {
         recentList->setToolTip(historyError);
     }
     connect(recentList, &QListWidget::currentItemChanged, this,
-        [this, moveDetails, recentList](QListWidgetItem* current, QListWidgetItem*) {
+        [this, moveDetails, recentList, replayButton](QListWidgetItem* current, QListWidgetItem*) {
             if (!current || !current->data(Qt::UserRole).isValid()) {
                 moveDetails->clear();
                 replayButton->setEnabled(false);
@@ -1482,6 +1482,216 @@ void MainWindow::showStatistics() {
         page->deleteLater();
     });
     addButtonFeedback(back, buttonSound_);
+}
+
+void MainWindow::showReplay(qint64 replayGameId, const QString& gameTitle, QWidget* returnPage) {
+    QStringList notations;
+    QString error;
+    if (!database_.getGameMoves(userId_, replayGameId, &notations, &error)) {
+        showInlineMessage(QStringLiteral("Не удалось открыть партию"), error);
+        return;
+    }
+
+    // Rebuild every position from the saved notation using the actual rules
+    // engine. This validates the record and keeps replay independent of live play.
+    std::vector<Board> positions;
+    std::vector<Side> sides;
+    std::vector<Move> moves;
+    positions.reserve(static_cast<std::size_t>(notations.size()) + 1);
+    sides.reserve(static_cast<std::size_t>(notations.size()) + 1);
+    moves.reserve(static_cast<std::size_t>(notations.size()));
+
+    Board replayPosition;
+    Side replaySide = Side::White;
+    positions.push_back(replayPosition);
+    sides.push_back(replaySide);
+    const QRegularExpression coordinatePattern(QStringLiteral("([a-h][1-8])"));
+
+    for (int ply = 0; ply < notations.size(); ++ply) {
+        const QString notation = notations.at(ply);
+        QRegularExpressionMatchIterator matches = coordinatePattern.globalMatch(notation);
+        std::vector<Square> path;
+        while (matches.hasNext()) {
+            const QString coordinate = matches.next().captured(1);
+            const int column = coordinate.at(0).toLatin1() - 'a';
+            const int row = 8 - coordinate.at(1).digitValue();
+            const Square square = Board::toSquare(row, column);
+            if (square < 0) {
+                showInlineMessage(QStringLiteral("Ошибка записи партии"),
+                    QStringLiteral("Некорректная координата в ходе %1.").arg(ply + 1));
+                return;
+            }
+            path.push_back(square);
+        }
+        if (path.size() < 2) {
+            showInlineMessage(QStringLiteral("Ошибка записи партии"),
+                QStringLiteral("Не удалось разобрать ход %1: %2").arg(ply + 1).arg(notation));
+            return;
+        }
+
+        const std::vector<Move> legal = replayPosition.generateMoves(replaySide);
+        const auto found = std::find_if(legal.begin(), legal.end(), [&path](const Move& candidate) {
+            if (candidate.from != path.front() ||
+                static_cast<std::size_t>(candidate.length) != path.size() - 1)
+                return false;
+            for (std::size_t step = 1; step < path.size(); ++step)
+                if (candidate.landings[step - 1] != path[step]) return false;
+            return true;
+        });
+        if (found == legal.end()) {
+            showInlineMessage(QStringLiteral("Не удалось воспроизвести партию"),
+                QStringLiteral("Ход %1 не соответствует правилам или предыдущим ходам:\\n%2")
+                    .arg(ply + 1).arg(notation));
+            return;
+        }
+
+        const Move move = *found;
+        Undo undo;
+        if (!replayPosition.makeMove(move, undo)) {
+            showInlineMessage(QStringLiteral("Ошибка воспроизведения"),
+                QStringLiteral("Не удалось применить ход %1.").arg(ply + 1));
+            return;
+        }
+        moves.push_back(move);
+        replaySide = opposite(replaySide);
+        positions.push_back(replayPosition);
+        sides.push_back(replaySide);
+    }
+
+    auto* page = new QWidget(pages_);
+    page->setObjectName("appBackground");
+    auto* root = new QVBoxLayout(page);
+    root->setContentsMargins(24, 20, 24, 20);
+    root->setSpacing(14);
+
+    auto* header = new QHBoxLayout;
+    auto* back = new QPushButton(QStringLiteral("←  К истории партий"), page);
+    back->setObjectName("secondary");
+    back->setMinimumHeight(42);
+    auto* heading = new QLabel(QStringLiteral("Просмотр партии"), page);
+    heading->setObjectName("title");
+    header->addWidget(back);
+    header->addSpacing(12);
+    header->addWidget(heading);
+    header->addStretch(1);
+    root->addLayout(header);
+
+    auto* content = new QHBoxLayout;
+    content->setSpacing(18);
+    auto* replayBoard = new BoardWidget(page);
+    replayBoard->setObjectName("replayBoard");
+    replayBoard->setDarkTheme(darkTheme_);
+    replayBoard->setMinimumSize(420, 420);
+    replayBoard->setInteractionEnabled(false);
+    content->addWidget(replayBoard, 1);
+
+    auto* panel = new QFrame(page);
+    panel->setObjectName("sidePanel");
+    panel->setFixedWidth(292);
+    auto* panelLayout = new QVBoxLayout(panel);
+    panelLayout->setContentsMargins(20, 22, 20, 22);
+    panelLayout->setSpacing(12);
+
+    auto* gameName = new QLabel(gameTitle, panel);
+    gameName->setObjectName("sectionTitle");
+    gameName->setWordWrap(true);
+    auto* replayStatus = new QLabel(panel);
+    replayStatus->setObjectName("muted");
+    replayStatus->setWordWrap(true);
+    auto* moveHeading = new QLabel(QStringLiteral("Текущий ход"), panel);
+    moveHeading->setObjectName("fieldLabel");
+    auto* moveDetails = new QLabel(panel);
+    moveDetails->setObjectName("status");
+    moveDetails->setWordWrap(true);
+    moveDetails->setMinimumHeight(70);
+    auto* moveSlider = new QSlider(Qt::Horizontal, panel);
+    moveSlider->setObjectName("replaySlider");
+    moveSlider->setRange(0, static_cast<int>(moves.size()));
+    moveSlider->setSingleStep(1);
+    moveSlider->setPageStep(5);
+    moveSlider->setTracking(true);
+
+    auto* controls = new QGridLayout;
+    controls->setSpacing(8);
+    auto makeControl = [panel](const QString& caption, const QString& tip) {
+        auto* button = new QPushButton(caption, panel);
+        button->setObjectName("secondary");
+        button->setMinimumHeight(44);
+        button->setToolTip(tip);
+        return button;
+    };
+    auto* first = makeControl(QStringLiteral("⏮"), QStringLiteral("В начало"));
+    auto* previous = makeControl(QStringLiteral("◀"), QStringLiteral("Предыдущий ход"));
+    auto* next = makeControl(QStringLiteral("▶"), QStringLiteral("Следующий ход"));
+    auto* last = makeControl(QStringLiteral("⏭"), QStringLiteral("В конец"));
+    controls->addWidget(first, 0, 0);
+    controls->addWidget(previous, 0, 1);
+    controls->addWidget(next, 1, 0);
+    controls->addWidget(last, 1, 1);
+
+    panelLayout->addWidget(gameName);
+    panelLayout->addWidget(replayStatus);
+    panelLayout->addSpacing(8);
+    panelLayout->addWidget(moveHeading);
+    panelLayout->addWidget(moveDetails);
+    panelLayout->addWidget(moveSlider);
+    panelLayout->addLayout(controls);
+    panelLayout->addStretch(1);
+    auto* replayHint = new QLabel(
+        QStringLiteral("Используйте кнопки или ползунок, чтобы перемещаться по ходам. Текущая партия не изменяется."),
+        panel);
+    replayHint->setObjectName("muted");
+    replayHint->setWordWrap(true);
+    panelLayout->addWidget(replayHint);
+    content->addWidget(panel);
+    root->addLayout(content, 1);
+
+    auto renderPly = [this, replayBoard, replayStatus, moveDetails, moveSlider,
+                      positions = std::move(positions), sides = std::move(sides),
+                      moves = std::move(moves), notations](int requestedPly) {
+        const int ply = qBound(0, requestedPly, static_cast<int>(moves.size()));
+        const QSignalBlocker blocker(moveSlider);
+        moveSlider->setValue(ply);
+        std::vector<Move> legal = positions[static_cast<std::size_t>(ply)].generateMoves(
+            sides[static_cast<std::size_t>(ply)]);
+        replayBoard->setPosition(positions[static_cast<std::size_t>(ply)],
+                                 sides[static_cast<std::size_t>(ply)], legal);
+        replayBoard->setLastMove(ply > 0 ? moves[static_cast<std::size_t>(ply - 1)] : Move{});
+        replayBoard->setInteractionEnabled(false);
+        replayStatus->setText(ply == 0
+            ? QStringLiteral("Начальная позиция · %1 ходов в записи").arg(moves.size())
+            : QStringLiteral("Ход %1 из %2 · %3")
+                  .arg(ply).arg(moves.size())
+                  .arg(sides[static_cast<std::size_t>(ply)] == Side::White
+                       ? QStringLiteral("ход белых") : QStringLiteral("ход чёрных")));
+        moveDetails->setText(ply == 0
+            ? QStringLiteral("Партия ещё не началась")
+            : notations.at(ply - 1));
+    };
+
+    connect(moveSlider, &QSlider::valueChanged, this, renderPly);
+    connect(first, &QPushButton::clicked, this, [moveSlider] { moveSlider->setValue(0); });
+    connect(previous, &QPushButton::clicked, this, [moveSlider] {
+        moveSlider->setValue(qMax(moveSlider->minimum(), moveSlider->value() - 1));
+    });
+    connect(next, &QPushButton::clicked, this, [moveSlider] {
+        moveSlider->setValue(qMin(moveSlider->maximum(), moveSlider->value() + 1));
+    });
+    connect(last, &QPushButton::clicked, this, [moveSlider] { moveSlider->setValue(moveSlider->maximum()); });
+    connect(back, &QPushButton::clicked, this, [this, page, returnPage] {
+        navigateToPage(returnPage);
+        pages_->removeWidget(page);
+        page->deleteLater();
+    });
+    addButtonFeedback(back, buttonSound_);
+    addButtonFeedback(first, buttonSound_);
+    addButtonFeedback(previous, buttonSound_);
+    addButtonFeedback(next, buttonSound_);
+    addButtonFeedback(last, buttonSound_);
+
+    pages_->addWidget(page);
+    navigateToPage(page);
+    renderPly(0);
 }
 
 void MainWindow::exportProtocol() {
