@@ -244,29 +244,59 @@ bool Database::finishGame(qint64 gameId, const QString& result, QString* error) 
     return true;
 }
 
-QString Database::userStatistics(qint64 userId, QString* error) const {
+bool Database::getUserStatistics(qint64 userId, UserStatistics* statistics, QString* error) const {
+    if (userId <= 0 || !statistics) {
+        if (error) *error = QStringLiteral("Некорректный пользователь для статистики.");
+        return false;
+    }
+
     QSqlQuery query(db_);
     query.prepare(QStringLiteral(
         "SELECT COUNT(*), "
-        "SUM(CASE WHEN result='win' THEN 1 ELSE 0 END), "
-        "SUM(CASE WHEN result='loss' THEN 1 ELSE 0 END), "
-        "SUM(CASE WHEN result='draw' THEN 1 ELSE 0 END), "
-        "SUM(CASE WHEN result='abandoned' THEN 1 ELSE 0 END) "
+        "COALESCE(SUM(CASE WHEN result='win' THEN 1 ELSE 0 END), 0), "
+        "COALESCE(SUM(CASE WHEN result='loss' THEN 1 ELSE 0 END), 0), "
+        "COALESCE(SUM(CASE WHEN result='draw' THEN 1 ELSE 0 END), 0), "
+        "COALESCE(SUM(CASE WHEN result='abandoned' THEN 1 ELSE 0 END), 0), "
+        "COALESCE(SUM(CASE WHEN finished_at IS NULL "
+        "THEN MAX(0, CAST((julianday('now') - julianday(started_at)) * 86400 AS INTEGER)) "
+        "ELSE MAX(0, CAST((julianday(finished_at) - julianday(started_at)) * 86400 AS INTEGER)) END), 0), "
+        "COALESCE(SUM(CASE WHEN finished_at IS NOT NULL "
+        "THEN MAX(0, CAST((julianday(finished_at) - julianday(started_at)) * 86400 AS INTEGER)) "
+        "ELSE 0 END), 0), "
+        "(SELECT COUNT(*) FROM moves m INNER JOIN games g ON g.id=m.game_id WHERE g.user_id=?) "
         "FROM games WHERE user_id=?"));
+    query.addBindValue(userId);
     query.addBindValue(userId);
     if (!query.exec() || !query.next()) {
         if (error) *error = query.lastError().text();
-        return QStringLiteral("Не удалось загрузить статистику.");
+        return false;
     }
-    const int total = query.value(0).toInt();
-    const int wins = query.value(1).toInt();
-    const int losses = query.value(2).toInt();
-    const int draws = query.value(3).toInt();
-    const int abandoned = query.value(4).toInt();
-    const int completed = wins + losses + draws;
-    const int percent = completed > 0 ? qRound(100.0 * wins / completed) : 0;
-    return QStringLiteral("Всего партий: %1\nПобеды: %2\nПоражения: %3\nНичьи: %4\nПрервано: %5\nПроцент побед: %6%")
-        .arg(total).arg(wins).arg(losses).arg(draws).arg(abandoned).arg(percent);
+
+    statistics->totalGames = query.value(0).toLongLong();
+    statistics->wins = query.value(1).toLongLong();
+    statistics->losses = query.value(2).toLongLong();
+    statistics->draws = query.value(3).toLongLong();
+    statistics->abandoned = query.value(4).toLongLong();
+    statistics->totalPlaySeconds = qMax<qint64>(0, query.value(5).toLongLong());
+    const qint64 completedSeconds = qMax<qint64>(0, query.value(6).toLongLong());
+    statistics->totalMoves = query.value(7).toLongLong();
+
+    const qint64 completedGames = statistics->wins + statistics->losses + statistics->draws;
+    statistics->winRatePercent = completedGames > 0
+        ? qBound(0, qRound(100.0 * double(statistics->wins) / double(completedGames)), 100)
+        : 0;
+    statistics->averageGameSeconds = completedGames > 0 ? completedSeconds / completedGames : 0;
+    return true;
+}
+
+QString Database::userStatistics(qint64 userId, QString* error) const {
+    UserStatistics statistics;
+    if (!getUserStatistics(userId, &statistics, error))
+        return QStringLiteral("Не удалось загрузить статистику.");
+    return QStringLiteral("Всего партий: %1\nПобеды: %2\nПоражения: %3\nНичьи: %4\nПрервано: %5\nПроцент побед: %6%\nВремя в игре: %7 сек.\nСредняя партия: %8 сек.\nХодов: %9")
+        .arg(statistics.totalGames).arg(statistics.wins).arg(statistics.losses)
+        .arg(statistics.draws).arg(statistics.abandoned).arg(statistics.winRatePercent)
+        .arg(statistics.totalPlaySeconds).arg(statistics.averageGameSeconds).arg(statistics.totalMoves);
 }
 
 bool Database::saveProtocol(const QString& filePath, const QString& username,
