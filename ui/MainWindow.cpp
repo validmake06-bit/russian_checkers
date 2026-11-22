@@ -4,6 +4,7 @@
 #include <QComboBox>
 #include <QLabel>
 #include <QListWidget>
+#include <QTextEdit>
 #include <QPushButton>
 #include <QToolButton>
 #include <QHBoxLayout>
@@ -1272,7 +1273,7 @@ void MainWindow::showStatistics() {
 
     auto* card = new QFrame(page);
     card->setObjectName("sidePanel");
-    card->setMaximumWidth(900);
+    card->setMaximumWidth(980);
     auto* layout = new QVBoxLayout(card);
     layout->setContentsMargins(34, 30, 34, 30);
     layout->setSpacing(18);
@@ -1367,6 +1368,80 @@ void MainWindow::showStatistics() {
     rateText->addStretch(1);
     rateLayout->addLayout(rateText, 1);
     layout->addWidget(ratePanel);
+
+    // Recent games are intentionally limited to the latest 50 records.
+    auto* historyHeading = new QLabel(QStringLiteral("Последние партии"), card);
+    historyHeading->setObjectName("sectionTitle");
+    auto* historyHint = new QLabel(QStringLiteral("Выберите партию, чтобы посмотреть сохранённую запись ходов. Хранятся последние 50 партий."), card);
+    historyHint->setObjectName("muted");
+    historyHint->setWordWrap(true);
+    auto* historyLayout = new QHBoxLayout;
+    historyLayout->setSpacing(12);
+    auto* recentList = new QListWidget(card);
+    recentList->setObjectName("recentGamesList");
+    recentList->setMinimumWidth(260);
+    recentList->setMinimumHeight(190);
+    recentList->setMaximumHeight(230);
+    auto* moveDetails = new QTextEdit(card);
+    moveDetails->setObjectName("recentGameDetails");
+    moveDetails->setReadOnly(true);
+    moveDetails->setPlaceholderText(QStringLiteral("Выберите партию слева — здесь появятся её ходы."));
+    moveDetails->setMinimumHeight(190);
+    moveDetails->setMaximumHeight(230);
+    historyLayout->addWidget(recentList, 1);
+    historyLayout->addWidget(moveDetails, 1);
+
+    QList<RecentGameRecord> recentGames;
+    QString historyError;
+    if (database_.getRecentGames(userId_, &recentGames, &historyError)) {
+        for (const RecentGameRecord& game : recentGames) {
+            const QString resultLabel = game.result == QStringLiteral("win") ? QStringLiteral("Победа")
+                : game.result == QStringLiteral("loss") ? QStringLiteral("Поражение")
+                : game.result == QStringLiteral("draw") ? QStringLiteral("Ничья")
+                : game.result == QStringLiteral("abandoned") ? QStringLiteral("Прервана")
+                : QStringLiteral("В процессе");
+            const QString difficultyLabel = game.difficulty == 2 ? QStringLiteral("Лёгкий")
+                : game.difficulty == 4 ? QStringLiteral("Средний")
+                : game.difficulty == 6 ? QStringLiteral("Сложный")
+                : game.difficulty == 8 ? QStringLiteral("Максимальный")
+                : QStringLiteral("—");
+            const QString dateLabel = QDateTime::fromString(game.startedAt, QStringLiteral("yyyy-MM-dd HH:mm:ss"))
+                .toString(QStringLiteral("dd.MM.yyyy  HH:mm"));
+            auto* item = new QListWidgetItem(
+                QStringLiteral("%1   ·   %2\n%3  ·  %4 ходов")
+                    .arg(dateLabel.isEmpty() ? game.startedAt : dateLabel, resultLabel,
+                         difficultyLabel, QString::number(game.moveCount)), recentList);
+            item->setData(Qt::UserRole, game.id);
+            item->setToolTip(QStringLiteral("Партия №%1").arg(game.id));
+        }
+        if (recentList->count() == 0)
+            recentList->addItem(QStringLiteral("Сохранённых партий пока нет"));
+    } else {
+        recentList->addItem(QStringLiteral("Не удалось загрузить историю"));
+        recentList->setToolTip(historyError);
+    }
+    connect(recentList, &QListWidget::currentItemChanged, this,
+        [this, moveDetails, recentList](QListWidgetItem* current, QListWidgetItem*) {
+            if (!current || !current->data(Qt::UserRole).isValid()) {
+                moveDetails->clear();
+                return;
+            }
+            QStringList moves;
+            QString error;
+            const qint64 selectedGameId = current->data(Qt::UserRole).toLongLong();
+            if (!database_.getGameMoves(userId_, selectedGameId, &moves, &error)) {
+                moveDetails->setPlainText(QStringLiteral("Не удалось загрузить ходы.\n%1").arg(error));
+                return;
+            }
+            moveDetails->setPlainText(moves.isEmpty()
+                ? QStringLiteral("В этой партии ещё нет сохранённых ходов.")
+                : moves.join(QLatin1Char('\n')));
+        });
+    if (recentList->count() > 0 && recentList->item(0)->data(Qt::UserRole).isValid())
+        recentList->setCurrentRow(0);
+    layout->addWidget(historyHeading);
+    layout->addWidget(historyHint);
+    layout->addLayout(historyLayout);
 
     auto* actions = new QHBoxLayout;
     actions->addStretch(1);
