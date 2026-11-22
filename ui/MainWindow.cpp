@@ -324,12 +324,6 @@ MainWindow::MainWindow(Database& database, qint64 userId, QString username, QWid
     drawerToggle_->setCursor(Qt::PointingHandCursor);
     drawerToggle_->setFocusPolicy(Qt::NoFocus);
     drawerToggle_->setToolTip(QStringLiteral("Открыть меню партии"));
-    drawerToggle_->setStyleSheet(
-        "QToolButton#drawerToggle { background-color: #ead8c2; color: #3b271d; "
-        "border: 1px solid #c5a98b; border-radius: 14px; font-family: 'Segoe UI'; "
-        "font-size: 23px; font-weight: 700; padding: 0px; }"
-        "QToolButton#drawerToggle:hover { background-color: #fff0dc; }"
-        "QToolButton#drawerToggle:pressed { background-color: #c9a27d; padding-top: 2px; }");
     boardGrid->addWidget(drawerToggle_, 0, 0, Qt::AlignTop | Qt::AlignLeft);
     drawerToggle_->raise();
     root->addWidget(boardContainer, 1);
@@ -890,6 +884,7 @@ void MainWindow::applyTheme(bool dark) {
             QStatusBar { background: #101612; color: #a5b1a7; font-size: 11px; }
             QToolButton#drawerToggle { background: #27342c; color: #f3e5d2; border: 1px solid #596c5d; border-radius: 14px; font-size: 22px; }
             QToolButton#drawerToggle:hover { background: #394a3d; }
+            QToolButton#drawerToggle:pressed { background: #1d2821; }
             QLabel#statLabel { color: #aebcaf; font-size: 10px; font-weight: 700; letter-spacing: 1px; }
             QLabel#statValue { color: #f4eadc; font-size: 25px; font-weight: 750; }
             QLabel#statHint { color: #9eac9f; font-size: 11px; }
@@ -936,6 +931,7 @@ void MainWindow::applyTheme(bool dark) {
             QStatusBar { background: #e9e5dd; color: #777c70; font-size: 11px; }
             QToolButton#drawerToggle { background: #fffaf3; color: #594633; border: 1px solid #dfcbb4; border-radius: 14px; font-size: 22px; }
             QToolButton#drawerToggle:hover { background: #f0e5d7; }
+            QToolButton#drawerToggle:pressed { background: #e5d6c5; }
             QLabel#statLabel { color: #8a7966; font-size: 10px; font-weight: 700; letter-spacing: 1px; }
             QLabel#statValue { color: #352c24; font-size: 25px; font-weight: 750; }
             QLabel#statHint { color: #858076; font-size: 11px; }
