@@ -20,6 +20,7 @@ public:
     void setSelection(checkers::Square square);
     void animateMove(const checkers::Move& move, const checkers::Board& resultingBoard);
     void setDarkTheme(bool dark);
+    void setAnimationSettings(bool enabled, int speedPercent);
 
     QPointF animatedPosition() const { return animatedPosition_; }
     void setAnimatedPosition(const QPointF& p);
@@ -51,6 +52,8 @@ private:
     bool interactionEnabled_{true};
     bool darkTheme_{true};
     bool animating_{false};
+    bool animationsEnabled_{true};
+    int animationSpeedPercent_{100};
     checkers::Square animatedSquare_{-1};
     QPointF animatedPosition_;
     QVariantAnimation animation_;
