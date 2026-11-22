@@ -236,7 +236,7 @@ MainWindow::MainWindow(Database& database, qint64 userId, QString username, QWid
     musicEnabled_ = settings.value(QStringLiteral("audio/musicEnabled"), false).toBool();
     musicVolume_ = settings.value(QStringLiteral("audio/musicVolume"), 0.10).toReal();
     animationsEnabled_ = settings.value(QStringLiteral("game/animationsEnabled"), true).toBool();
-    animationSpeedPercent_ = settings.value(QStringLiteral("game/animationSpeedPercent"), 100).toInt();
+    animationSpeedPercent_ = std::clamp(settings.value(QStringLiteral("game/animationSpeedPercent"), 100).toInt(), 50, 150);
     boardView_->setAnimationSettings(animationsEnabled_, animationSpeedPercent_);
     moveSound_ = new QSoundEffect(this);
     captureSound_ = new QSoundEffect(this);
