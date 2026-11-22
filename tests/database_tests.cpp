@@ -83,9 +83,7 @@ int main(int argc, char* argv[]) {
         CHECK(metrics.totalGames == 51);
         CHECK(metrics.wins == 26);
         CHECK(metrics.draws == 25);
-        CHECK(database.setGameFavorite(userId, gameId, false, &error));
-        CHECK(database.getRecentGames(userId, &recentGames, &error));
-        CHECK(recentGames.size() == 50);
+
     }
 
     // Verify that user records and completed game history survive reopening.
@@ -96,8 +94,16 @@ int main(int argc, char* argv[]) {
         CHECK(reopened.authenticate(QStringLiteral("Tester"),
                                     QStringLiteral("correct-horse-battery"), &error) == userId);
         const QString statistics = reopened.userStatistics(userId, &error);
-        CHECK(statistics.contains(QStringLiteral("Всего партий: 50")));
-        CHECK(statistics.contains(QStringLiteral("Победы: 25")));
+        CHECK(statistics.contains(QStringLiteral("Всего партий: 51")));
+        CHECK(statistics.contains(QStringLiteral("Победы: 26")));
+        QList<RecentGameRecord> persistedGames;
+        CHECK(reopened.getRecentGames(userId, &persistedGames, &error));
+        CHECK(persistedGames.size() == 51);
+        CHECK(persistedGames.front().id == 1);
+        CHECK(persistedGames.front().isFavorite);
+        CHECK(reopened.setGameFavorite(userId, 1, false, &error));
+        CHECK(reopened.getRecentGames(userId, &persistedGames, &error));
+        CHECK(persistedGames.size() == 50);
     }
 
     std::cout << "All database tests passed.\n";
