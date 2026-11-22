@@ -1,4 +1,5 @@
 #include "MainWindow.h"
+#include "AuthDialog.h"
 #include "../db/Database.h"
 #include <QComboBox>
 #include <QLabel>
@@ -67,8 +68,8 @@ MainWindow::MainWindow(Database& database, qint64 userId, QString username, QWid
     title->setObjectName("title");
     auto* subtitle = new QLabel(QStringLiteral("Партия против компьютера"), panel);
     subtitle->setObjectName("muted");
-    auto* userLabel = new QLabel(QStringLiteral("Игрок: %1").arg(username_), panel);
-    userLabel->setObjectName("userLabel");
+    userLabel_ = new QLabel(QStringLiteral("Игрок: %1").arg(username_), panel);
+    userLabel_->setObjectName("userLabel");
 
     auto* divider1 = new QFrame(panel);
     divider1->setObjectName("separator");
@@ -120,7 +121,7 @@ MainWindow::MainWindow(Database& database, qint64 userId, QString username, QWid
     side->addWidget(brand);
     side->addWidget(title);
     side->addWidget(subtitle);
-    side->addWidget(userLabel);
+    side->addWidget(userLabel_);
     side->addSpacing(5);
     side->addWidget(divider1);
     side->addWidget(status_);
@@ -161,9 +162,9 @@ MainWindow::MainWindow(Database& database, qint64 userId, QString username, QWid
     auto* homeSubtitle = new QLabel(QStringLiteral("Игра против компьютера"), homePage_);
     homeSubtitle->setObjectName("muted");
     homeSubtitle->setAlignment(Qt::AlignCenter);
-    auto* homeUser = new QLabel(QStringLiteral("Вы вошли как  ·  %1").arg(username_), homePage_);
-    homeUser->setObjectName("userLabel");
-    homeUser->setAlignment(Qt::AlignCenter);
+    homeUserLabel_ = new QLabel(QStringLiteral("Вы вошли как  ·  %1").arg(username_), homePage_);
+    homeUserLabel_->setObjectName("userLabel");
+    homeUserLabel_->setAlignment(Qt::AlignCenter);
     homeStart_ = new QPushButton(QStringLiteral("Начать игру"), homePage_);
     homeStart_->setObjectName("primary");
     homeStart_->setMinimumHeight(52);
@@ -185,7 +186,7 @@ MainWindow::MainWindow(Database& database, qint64 userId, QString username, QWid
     // Keep the start screen focused on the game rather than promotional copy.
     homeSubtitle->hide();
     homeLayout->addSpacing(10);
-    homeLayout->addWidget(homeUser);
+    homeLayout->addWidget(homeUserLabel_);
     homeLayout->addSpacing(14);
     homeLayout->addWidget(homeStart_);
     homeLayout->addWidget(homeStats);
@@ -195,9 +196,19 @@ MainWindow::MainWindow(Database& database, qint64 userId, QString username, QWid
     homeLayout->addWidget(homeFooter);
 
     pages_ = new QStackedWidget(this);
+    authPage_ = new AuthDialog(database_, pages_);
+    pages_->addWidget(authPage_);
     pages_->addWidget(homePage_);
     pages_->addWidget(gamePage_);
-    pages_->setCurrentWidget(homePage_);
+    pages_->setCurrentWidget(userId_ >= 0 ? homePage_ : static_cast<QWidget*>(authPage_));
+    connect(authPage_, &AuthDialog::authenticated, this, [this](qint64 id, const QString& name) {
+        userId_ = id;
+        username_ = name;
+        userLabel_->setText(QStringLiteral("Игрок: %1").arg(username_));
+        homeUserLabel_->setText(QStringLiteral("Вы вошли как  ·  %1").arg(username_));
+        pages_->setCurrentWidget(homePage_);
+        statusBar()->showMessage(QStringLiteral("Добро пожаловать, %1").arg(username_), 3000);
+    });
     setCentralWidget(pages_);
     statusBar()->setSizeGripEnabled(false);
     statusBar()->showMessage(QStringLiteral("Готовы к игре · Русские шашки"));
