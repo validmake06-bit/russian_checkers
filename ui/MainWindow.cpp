@@ -1581,6 +1581,7 @@ void MainWindow::showReplay(qint64 replayGameId, const QString& gameTitle, QWidg
     auto* replayBoard = new BoardWidget(page);
     replayBoard->setObjectName("replayBoard");
     replayBoard->setDarkTheme(darkTheme_);
+    replayBoard->setAnimationSettings(animationsEnabled_, animationSpeedPercent_);
     replayBoard->setMinimumSize(420, 420);
     replayBoard->setInteractionEnabled(false);
     content->addWidget(replayBoard, 1);
@@ -1652,17 +1653,30 @@ void MainWindow::showReplay(qint64 replayGameId, const QString& gameTitle, QWidg
     content->addWidget(panel);
     root->addLayout(content, 1);
 
-    auto renderPly = [this, replayBoard, replayStatus, moveDetails, moveSlider,
+    auto currentPly = std::make_shared<int>(0);
+    auto renderPly = [this, replayBoard, replayStatus, moveDetails, moveSlider, currentPly,
                       positions = std::move(positions), sides = std::move(sides),
-                      moves = std::move(moves), notations](int requestedPly) {
+                      moves = std::move(moves), notations](int requestedPly, bool animateTransition) {
         const int ply = qBound(0, requestedPly, static_cast<int>(moves.size()));
+        const int previousPly = *currentPly;
         const QSignalBlocker blocker(moveSlider);
         moveSlider->setValue(ply);
-        std::vector<Move> legal = positions[static_cast<std::size_t>(ply)].generateMoves(
-            sides[static_cast<std::size_t>(ply)]);
-        replayBoard->setPosition(positions[static_cast<std::size_t>(ply)],
-                                 sides[static_cast<std::size_t>(ply)], legal);
-        replayBoard->setLastMove(ply > 0 ? moves[static_cast<std::size_t>(ply - 1)] : Move{});
+        if (animateTransition && ply == previousPly + 1) {
+            const std::size_t previousIndex = static_cast<std::size_t>(previousPly);
+            std::vector<Move> previousLegal = positions[previousIndex].generateMoves(sides[previousIndex]);
+            replayBoard->setPosition(positions[previousIndex], sides[previousIndex], previousLegal);
+            replayBoard->setLastMove(previousPly > 0
+                ? moves[static_cast<std::size_t>(previousPly - 1)] : Move{});
+            replayBoard->animateMove(moves[static_cast<std::size_t>(ply - 1)],
+                                     positions[static_cast<std::size_t>(ply)]);
+        } else {
+            std::vector<Move> legal = positions[static_cast<std::size_t>(ply)].generateMoves(
+                sides[static_cast<std::size_t>(ply)]);
+            replayBoard->setPosition(positions[static_cast<std::size_t>(ply)],
+                                     sides[static_cast<std::size_t>(ply)], legal);
+            replayBoard->setLastMove(ply > 0 ? moves[static_cast<std::size_t>(ply - 1)] : Move{});
+        }
+        *currentPly = ply;
         replayBoard->setInteractionEnabled(false);
         replayStatus->setText(ply == 0
             ? QStringLiteral("Начальная позиция · %1 ходов в записи").arg(moves.size())
@@ -1675,13 +1689,16 @@ void MainWindow::showReplay(qint64 replayGameId, const QString& gameTitle, QWidg
             : notations.at(ply - 1));
     };
 
-    connect(moveSlider, &QSlider::valueChanged, this, renderPly);
+    connect(moveSlider, &QSlider::valueChanged, this, [renderPly](int ply) {
+        renderPly(ply, false);
+    });
     connect(first, &QPushButton::clicked, this, [moveSlider] { moveSlider->setValue(0); });
     connect(previous, &QPushButton::clicked, this, [moveSlider] {
         moveSlider->setValue(qMax(moveSlider->minimum(), moveSlider->value() - 1));
     });
-    connect(next, &QPushButton::clicked, this, [moveSlider] {
-        moveSlider->setValue(qMin(moveSlider->maximum(), moveSlider->value() + 1));
+    connect(next, &QPushButton::clicked, this, [moveSlider, renderPly] {
+        if (moveSlider->value() < moveSlider->maximum())
+            renderPly(moveSlider->value() + 1, true);
     });
     connect(last, &QPushButton::clicked, this, [moveSlider] { moveSlider->setValue(moveSlider->maximum()); });
     connect(playPause, &QPushButton::clicked, this, [playPause, replayTimer, moveSlider] {
@@ -1697,13 +1714,13 @@ void MainWindow::showReplay(qint64 replayGameId, const QString& gameTitle, QWidg
             }
         }
     });
-    connect(replayTimer, &QTimer::timeout, this, [replayTimer, moveSlider, playPause] {
+    connect(replayTimer, &QTimer::timeout, this, [replayTimer, moveSlider, playPause, renderPly] {
         if (moveSlider->value() >= moveSlider->maximum()) {
             replayTimer->stop();
             playPause->setText(QStringLiteral("↻  Повторить"));
             return;
         }
-        moveSlider->setValue(moveSlider->value() + 1);
+        renderPly(moveSlider->value() + 1, true);
         if (moveSlider->value() >= moveSlider->maximum()) {
             replayTimer->stop();
             playPause->setText(QStringLiteral("↻  Повторить"));
@@ -1724,7 +1741,7 @@ void MainWindow::showReplay(qint64 replayGameId, const QString& gameTitle, QWidg
 
     pages_->addWidget(page);
     navigateToPage(page);
-    renderPly(0);
+    renderPly(0, false);
 }
 
 void MainWindow::exportProtocol() {
