@@ -23,7 +23,6 @@
 #include <QStandardPaths>
 #include <QVector>
 #include <QPropertyAnimation>
-#include <QGraphicsOpacityEffect>
 #include <QtMath>
 #include <QSettings>
 #include <QSoundEffect>
@@ -148,23 +147,9 @@ void addButtonFeedback(QPushButton* button, QSoundEffect* clickSound) {
     if (!button || button->property("feedbackInstalled").toBool()) return;
     button->setProperty("feedbackInstalled", true);
     button->setCursor(Qt::PointingHandCursor);
-    auto* opacity = new QGraphicsOpacityEffect(button);
-    button->setGraphicsEffect(opacity);
-    auto* animation = new QPropertyAnimation(opacity, "opacity", button);
-    animation->setDuration(105);
-    animation->setEasingCurve(QEasingCurve::OutCubic);
-    QObject::connect(button, &QPushButton::pressed, button, [opacity, animation] {
-        animation->stop();
-        animation->setStartValue(opacity->opacity());
-        animation->setEndValue(0.78);
-        animation->start();
-    });
-    QObject::connect(button, &QPushButton::released, button, [opacity, animation] {
-        animation->stop();
-        animation->setStartValue(opacity->opacity());
-        animation->setEndValue(1.0);
-        animation->start();
-    });
+    // Avoid QGraphicsOpacityEffect on interactive controls: page transitions and
+    // overlapping pressed/released animations could leave a button transparent.
+    // The widget stylesheet already provides hover/pressed visual feedback.
     QObject::connect(button, &QPushButton::clicked, button, [clickSound] {
         if (clickSound) clickSound->play();
     });
@@ -357,6 +342,10 @@ MainWindow::MainWindow(Database& database, qint64 userId, QString username, QWid
     homeStart_ = new QPushButton(QStringLiteral("Начать партию"), homeCard);
     homeStart_->setObjectName("primary");
     homeStart_->setMinimumHeight(56);
+    homeLogin_ = new QPushButton(QStringLiteral("Войти в аккаунт"), homeCard);
+    homeLogin_->setObjectName("secondary");
+    homeLogin_->setMinimumHeight(48);
+    homeLogin_->setVisible(userId_ < 0);
     auto* homeStats = new QPushButton(QStringLiteral("Моя статистика"), homeCard);
     homeStats->setObjectName("secondary");
     homeStats->setMinimumHeight(48);
@@ -379,6 +368,7 @@ MainWindow::MainWindow(Database& database, qint64 userId, QString username, QWid
     homeCardLayout->addWidget(homeUserLabel_);
     homeCardLayout->addSpacing(9);
     homeCardLayout->addWidget(homeStart_);
+    homeCardLayout->addWidget(homeLogin_);
     homeCardLayout->addWidget(homeStats);
     homeCardLayout->addWidget(homeSettings);
     homeCardLayout->addWidget(homeTheme);
@@ -396,7 +386,10 @@ MainWindow::MainWindow(Database& database, qint64 userId, QString username, QWid
         userId_ = id;
         username_ = name;
         userLabel_->setText(QStringLiteral("Игрок: %1").arg(username_));
-        homeUserLabel_->setText(QStringLiteral("Вы вошли как  ·  %1").arg(username_));
+        homeUserLabel_->setText(userId_ < 0
+            ? QStringLiteral("Вы вошли как  ·  Гость")
+            : QStringLiteral("Вы вошли как  ·  %1").arg(username_));
+        if (homeLogin_) homeLogin_->setVisible(userId_ < 0);
         pages_->setCurrentWidget(homePage_);
         statusBar()->showMessage(QStringLiteral("Добро пожаловать, %1").arg(username_), 3000);
     });
@@ -418,6 +411,10 @@ MainWindow::MainWindow(Database& database, qint64 userId, QString username, QWid
         pages_->setCurrentWidget(gamePage_);
         if (gameId_ < 0 || gameResult_ != QStringLiteral("in_progress")) startNewGame();
         else refresh();
+    });
+    connect(homeLogin_, &QPushButton::clicked, this, [this] {
+        authPage_->openLoginPage();
+        pages_->setCurrentWidget(authPage_);
     });
     connect(homeStats, &QPushButton::clicked, this, &MainWindow::showStatistics);
     connect(homeSettings, &QPushButton::clicked, this, &MainWindow::openSettings);
