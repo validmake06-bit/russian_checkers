@@ -158,7 +158,7 @@ MainWindow::MainWindow(Database& database, qint64 userId, QString username, QWid
     auto* homeTitle = new QLabel(QStringLiteral("Русские шашки"), homePage_);
     homeTitle->setObjectName("title");
     homeTitle->setAlignment(Qt::AlignCenter);
-    auto* homeSubtitle = new QLabel(QStringLiteral("Спокойная классика. Чистый интерфейс. Умный соперник."), homePage_);
+    auto* homeSubtitle = new QLabel(QStringLiteral("Игра против компьютера"), homePage_);
     homeSubtitle->setObjectName("muted");
     homeSubtitle->setAlignment(Qt::AlignCenter);
     auto* homeUser = new QLabel(QStringLiteral("Вы вошли как  ·  %1").arg(username_), homePage_);
@@ -182,7 +182,8 @@ MainWindow::MainWindow(Database& database, qint64 userId, QString username, QWid
     homeLayout->addWidget(homeBrand);
     homeLayout->addSpacing(12);
     homeLayout->addWidget(homeTitle);
-    homeLayout->addWidget(homeSubtitle);
+    // Keep the start screen focused on the game rather than promotional copy.
+    homeSubtitle->hide();
     homeLayout->addSpacing(10);
     homeLayout->addWidget(homeUser);
     homeLayout->addSpacing(14);
@@ -513,53 +514,96 @@ void MainWindow::playMoveSound(bool capture) {
 }
 
 void MainWindow::openSettings() {
-    QDialog dialog(this);
-    dialog.setWindowTitle(QStringLiteral("Настройки"));
-    dialog.setModal(true);
-    dialog.setMinimumWidth(360);
-    auto* layout = new QVBoxLayout(&dialog);
-    auto* form = new QFormLayout;
-    auto* theme = new QComboBox(&dialog);
-    theme->addItem(QStringLiteral("Светлая"), false);
-    theme->addItem(QStringLiteral("Тёмная"), true);
-    theme->setCurrentIndex(darkTheme_ ? 1 : 0);
-    auto* sound = new QCheckBox(QStringLiteral("Звуковые эффекты"), &dialog);
-    sound->setChecked(soundsEnabled_);
-    auto* volume = new QSlider(Qt::Horizontal, &dialog);
-    volume->setRange(0, 100);
-    volume->setValue(qRound(soundVolume_ * 100.0));
-    auto* music = new QCheckBox(QStringLiteral("Фоновая музыка"), &dialog);
-    music->setChecked(musicEnabled_);
-    auto* musicVolume = new QSlider(Qt::Horizontal, &dialog);
-    musicVolume->setRange(0, 30);
-    musicVolume->setValue(qRound(musicVolume_ * 100.0));
-    form->addRow(QStringLiteral("Оформление"), theme);
-    form->addRow(QStringLiteral("Звук"), sound);
-    form->addRow(QStringLiteral("Громкость эффектов"), volume);
-    form->addRow(QStringLiteral("Музыка"), music);
-    form->addRow(QStringLiteral("Громкость музыки"), musicVolume);
-    layout->addLayout(form);
-    auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
-    layout->addWidget(buttons);
-    connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
-    connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
-    if (darkTheme_) {
-        dialog.setStyleSheet(QStringLiteral("QDialog{background:#202630;color:#edf0f3;font-family:Segoe UI;} QLabel{color:#edf0f3;} QComboBox{background:#1a2029;color:#edf0f3;border:1px solid #35404d;border-radius:7px;padding:6px;} QPushButton{background:#2b3540;color:#edf0f3;border:1px solid #3a4651;border-radius:7px;padding:7px 16px;} QPushButton:hover{background:#35424c;}") );
-    } else {
-        dialog.setStyleSheet(QStringLiteral("QDialog{background:#ffffff;color:#303832;font-family:Segoe UI;} QLabel{color:#303832;} QComboBox{background:#fbfcfa;color:#303832;border:1px solid #e0e6df;border-radius:7px;padding:6px;} QPushButton{background:#f2f5f1;color:#536257;border:1px solid #e0e7df;border-radius:7px;padding:7px 16px;} QPushButton:hover{background:#e9efe8;}") );
-    }
-    if (dialog.exec() == QDialog::Accepted) {
-        applyTheme(theme->currentData().toBool());
-        applySoundSettings(sound->isChecked(), volume->value() / 100.0);
-        musicEnabled_ = music->isChecked();
-        musicVolume_ = musicVolume->value() / 100.0;
-        if (musicOutput_) musicOutput_->setVolume(musicVolume_);
-        if (musicPlayer_) { if (musicEnabled_) musicPlayer_->play(); else musicPlayer_->stop(); }
-        QSettings().setValue(QStringLiteral("audio/musicEnabled"), musicEnabled_);
-        QSettings().setValue(QStringLiteral("audio/musicVolume"), musicVolume_);
-    }
-}
+    pageBeforeSettings_ = pages_->currentWidget();
+    if (!settingsPage_) {
+        settingsPage_ = new QWidget(pages_);
+        settingsPage_->setObjectName("appBackground");
+        auto* outer = new QVBoxLayout(settingsPage_);
+        outer->setContentsMargins(64, 42, 64, 42);
+        outer->addStretch(1);
 
+        auto* card = new QFrame(settingsPage_);
+        card->setObjectName("sidePanel");
+        card->setMaximumWidth(620);
+        auto* cardLayout = new QVBoxLayout(card);
+        cardLayout->setContentsMargins(34, 30, 34, 30);
+        cardLayout->setSpacing(18);
+
+        auto* eyebrow = new QLabel(QStringLiteral("RUSSIAN CHECKERS  /  ПАРАМЕТРЫ"), card);
+        eyebrow->setObjectName("brand");
+        auto* heading = new QLabel(QStringLiteral("Настройки"), card);
+        heading->setObjectName("title");
+        auto* description = new QLabel(QStringLiteral("Настройте внешний вид и звуковое сопровождение игры."), card);
+        description->setObjectName("muted");
+        auto* separator = new QFrame(card);
+        separator->setObjectName("separator");
+        separator->setFrameShape(QFrame::HLine);
+
+        auto* form = new QFormLayout;
+        form->setHorizontalSpacing(24);
+        form->setVerticalSpacing(16);
+        themeSetting_ = new QComboBox(card);
+        themeSetting_->setObjectName("settingsTheme");
+        themeSetting_->addItem(QStringLiteral("Светлая тема"), false);
+        themeSetting_->addItem(QStringLiteral("Тёмная тема"), true);
+        soundSetting_ = new QCheckBox(QStringLiteral("Звуки ходов и взятий"), card);
+        soundSetting_->setObjectName("settingsSound");
+        soundVolumeSetting_ = new QSlider(Qt::Horizontal, card);
+        soundVolumeSetting_->setRange(0, 100);
+        musicSetting_ = new QCheckBox(QStringLiteral("Фоновая музыка"), card);
+        musicSetting_->setObjectName("settingsMusic");
+        musicVolumeSetting_ = new QSlider(Qt::Horizontal, card);
+        musicVolumeSetting_->setRange(0, 30);
+        form->addRow(QStringLiteral("Оформление"), themeSetting_);
+        form->addRow(QStringLiteral("Звуковые эффекты"), soundSetting_);
+        form->addRow(QStringLiteral("Громкость эффектов"), soundVolumeSetting_);
+        form->addRow(QStringLiteral("Музыка"), musicSetting_);
+        form->addRow(QStringLiteral("Громкость музыки"), musicVolumeSetting_);
+
+        auto* actions = new QHBoxLayout;
+        actions->addStretch(1);
+        auto* back = new QPushButton(QStringLiteral("Назад"), card);
+        back->setObjectName("secondary");
+        auto* save = new QPushButton(QStringLiteral("Сохранить настройки"), card);
+        save->setObjectName("primary");
+        actions->addWidget(back);
+        actions->addWidget(save);
+
+        cardLayout->addWidget(eyebrow);
+        cardLayout->addWidget(heading);
+        cardLayout->addWidget(description);
+        cardLayout->addWidget(separator);
+        cardLayout->addLayout(form);
+        cardLayout->addSpacing(8);
+        cardLayout->addLayout(actions);
+        outer->addWidget(card, 0, Qt::AlignHCenter);
+        outer->addStretch(1);
+        pages_->addWidget(settingsPage_);
+
+        connect(back, &QPushButton::clicked, this, [this] {
+            pages_->setCurrentWidget(pageBeforeSettings_ ? pageBeforeSettings_ : homePage_);
+        });
+        connect(save, &QPushButton::clicked, this, [this] {
+            applyTheme(themeSetting_->currentData().toBool());
+            applySoundSettings(soundSetting_->isChecked(), soundVolumeSetting_->value() / 100.0);
+            musicEnabled_ = musicSetting_->isChecked();
+            musicVolume_ = musicVolumeSetting_->value() / 100.0;
+            if (musicOutput_) musicOutput_->setVolume(musicVolume_);
+            if (musicPlayer_) { if (musicEnabled_) musicPlayer_->play(); else musicPlayer_->stop(); }
+            QSettings().setValue(QStringLiteral("audio/musicEnabled"), musicEnabled_);
+            QSettings().setValue(QStringLiteral("audio/musicVolume"), musicVolume_);
+            pages_->setCurrentWidget(pageBeforeSettings_ ? pageBeforeSettings_ : homePage_);
+            statusBar()->showMessage(QStringLiteral("Настройки сохранены"), 2600);
+        });
+    }
+
+    themeSetting_->setCurrentIndex(darkTheme_ ? 1 : 0);
+    soundSetting_->setChecked(soundsEnabled_);
+    soundVolumeSetting_->setValue(qRound(soundVolume_ * 100.0));
+    musicSetting_->setChecked(musicEnabled_);
+    musicVolumeSetting_->setValue(qRound(musicVolume_ * 100.0));
+    pages_->setCurrentWidget(settingsPage_);
+}
 void MainWindow::showHome() {
     if (aiThinking_) return;
     if (homeStart_) homeStart_->setText(!historyMoves_.empty() && gameResult_ == QStringLiteral("in_progress")
