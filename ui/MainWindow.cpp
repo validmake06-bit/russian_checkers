@@ -6,6 +6,8 @@
 #include <QListWidget>
 #include <QTextEdit>
 #include <QDateTime>
+#include <QRegularExpression>
+#include <QSignalBlocker>
 #include <QPushButton>
 #include <QToolButton>
 #include <QHBoxLayout>
@@ -1390,6 +1392,10 @@ void MainWindow::showStatistics() {
     moveDetails->setMaximumHeight(230);
     historyLayout->addWidget(recentList, 1);
     historyLayout->addWidget(moveDetails, 1);
+    auto* replayButton = new QPushButton(QStringLiteral("Открыть партию на доске"), card);
+    replayButton->setObjectName("primary");
+    replayButton->setMinimumHeight(44);
+    replayButton->setEnabled(false);
 
     QList<RecentGameRecord> recentGames;
     QString historyError;
@@ -1424,8 +1430,10 @@ void MainWindow::showStatistics() {
         [this, moveDetails, recentList](QListWidgetItem* current, QListWidgetItem*) {
             if (!current || !current->data(Qt::UserRole).isValid()) {
                 moveDetails->clear();
+                replayButton->setEnabled(false);
                 return;
             }
+            replayButton->setEnabled(true);
             QStringList moves;
             QString error;
             const qint64 selectedGameId = current->data(Qt::UserRole).toLongLong();
@@ -1442,6 +1450,12 @@ void MainWindow::showStatistics() {
     layout->addWidget(historyHeading);
     layout->addWidget(historyHint);
     layout->addLayout(historyLayout);
+    layout->addWidget(replayButton);
+    connect(replayButton, &QPushButton::clicked, this, [this, recentList, page] {
+        auto* current = recentList->currentItem();
+        if (!current || !current->data(Qt::UserRole).isValid()) return;
+        showReplay(current->data(Qt::UserRole).toLongLong(), current->text(), page);
+    });
 
     auto* actions = new QHBoxLayout;
     actions->addStretch(1);
