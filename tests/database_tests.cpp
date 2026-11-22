@@ -30,6 +30,7 @@ int main(int argc, char* argv[]) {
         CHECK(gameId > 0);
         CHECK(database.appendMove(gameId, 1, QStringLiteral("a3-b4"), &error));
         CHECK(database.finishGame(gameId, QStringLiteral("win"), &error));
+        CHECK(database.setGameFavorite(userId, gameId, true, &error));
 
         const QString statistics = database.userStatistics(userId, &error);
         CHECK(statistics.contains(QStringLiteral("Всего партий: 1")));
@@ -67,18 +68,24 @@ int main(int argc, char* argv[]) {
         }
         QList<RecentGameRecord> recentGames;
         CHECK(database.getRecentGames(userId, &recentGames, &error));
-        CHECK(recentGames.size() == 50);
-        CHECK(recentGames.front().id == newestGameId);
+        CHECK(recentGames.size() == 51);
+        CHECK(recentGames.front().id == gameId);
+        CHECK(recentGames.front().isFavorite);
+        CHECK(recentGames.back().id == newestGameId);
         QStringList recentMoves;
         CHECK(database.getGameMoves(userId, newestGameId, &recentMoves, &error));
         CHECK(recentMoves.size() == 1);
         CHECK(recentMoves.front() == QStringLiteral("move-50"));
         CHECK(database.getGameMoves(userId, gameId, &recentMoves, &error));
-        CHECK(recentMoves.isEmpty());
+        CHECK(recentMoves.size() == 1);
+        CHECK(recentMoves.front() == QStringLiteral("a3-b4"));
         CHECK(database.getUserStatistics(userId, &metrics, &error));
-        CHECK(metrics.totalGames == 50);
-        CHECK(metrics.wins == 25);
+        CHECK(metrics.totalGames == 51);
+        CHECK(metrics.wins == 26);
         CHECK(metrics.draws == 25);
+        CHECK(database.setGameFavorite(userId, gameId, false, &error));
+        CHECK(database.getRecentGames(userId, &recentGames, &error));
+        CHECK(recentGames.size() == 50);
     }
 
     // Verify that user records and completed game history survive reopening.
