@@ -6,6 +6,16 @@
 #include <QString>
 #include <QStringList>
 
+struct RecentGameRecord {
+    qint64 id{0};
+    QString startedAt;
+    QString finishedAt;
+    int humanSide{0};
+    int difficulty{0};
+    QString result;
+    qint64 moveCount{0};
+};
+
 struct UserStatistics {
     qint64 totalGames{0};
     qint64 wins{0};
@@ -35,6 +45,8 @@ public:
     bool appendMove(qint64 gameId, int ply, const QString& notation, QString* error = nullptr);
     bool finishGame(qint64 gameId, const QString& result, QString* error = nullptr);
     bool getUserStatistics(qint64 userId, UserStatistics* statistics, QString* error = nullptr) const;
+    bool getRecentGames(qint64 userId, QList<RecentGameRecord>* games, QString* error = nullptr) const;
+    bool getGameMoves(qint64 userId, qint64 gameId, QStringList* moves, QString* error = nullptr) const;
     QString userStatistics(qint64 userId, QString* error = nullptr) const;
     bool saveProtocol(const QString& filePath, const QString& username,
                       const QStringList& moves, const QString& result, QString* error = nullptr) const;
