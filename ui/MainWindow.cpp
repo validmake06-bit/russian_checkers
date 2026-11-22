@@ -438,8 +438,8 @@ void MainWindow::applyTheme(bool dark) {
 
     if (darkTheme_) {
         setStyleSheet(R"(
-            QMainWindow, QWidget#appBackground { background: #171b22; color: #edf0f3; font-family: "Segoe UI"; font-size: 13px; }
-            QFrame#sidePanel { background: #202630; border: 1px solid #303946; border-radius: 18px; }
+            QMainWindow, QWidget#appBackground { background: #151a20; color: #edf0f3; font-family: "Segoe UI"; font-size: 13px; }
+            QFrame#sidePanel { background: #1e252d; border: 1px solid #303a44; border-radius: 22px; }
             QLabel#brand { color: #9eaa9f; font-size: 10px; font-weight: 700; letter-spacing: 2px; }
             QLabel#title { color: #f3f4f2; font-size: 25px; font-weight: 700; }
             QLabel#muted { color: #9da7b3; font-size: 12px; }
@@ -458,16 +458,20 @@ void MainWindow::applyTheme(bool dark) {
             QPushButton#primary { background: #a8b9aa; color: #18201b; }
             QPushButton#primary:hover { background: #bac9bc; }
             QPushButton#primary:pressed { background: #91a494; }
-            QPushButton#secondary { background: #2b3540; color: #e5e9e7; border: 1px solid #3a4651; }
+            QPushButton#secondary { background: #29343e; color: #e5e9e7; border: 1px solid #3a4651; }
+            QCheckBox { spacing: 10px; color: #e5e9e7; }
+            QSlider::groove:horizontal { height: 5px; background: #3a4651; border-radius: 2px; }
+            QSlider::handle:horizontal { background: #a8b9aa; width: 15px; margin: -5px 0; border-radius: 7px; }
             QPushButton#secondary:hover { background: #35424c; }
             QPushButton#textButton { background: transparent; color: #aeb9b0; }
             QPushButton#textButton:hover { background: #29323e; color: #edf0f3; }
             QStatusBar { background: #141920; color: #8f9aa6; font-size: 11px; }
+            QToolTip { background: #29343e; color: #edf0f3; border: 1px solid #53675b; padding: 6px 9px; border-radius: 6px; }
         )");
     } else {
         setStyleSheet(R"(
-            QMainWindow, QWidget#appBackground { background: #f3f4f1; color: #303832; font-family: "Segoe UI"; font-size: 13px; }
-            QFrame#sidePanel { background: #ffffff; border: 1px solid #e2e6e1; border-radius: 18px; }
+            QMainWindow, QWidget#appBackground { background: #f1f3ef; color: #303832; font-family: "Segoe UI"; font-size: 13px; }
+            QFrame#sidePanel { background: #ffffff; border: 1px solid #e1e7df; border-radius: 22px; }
             QLabel#brand { color: #718276; font-size: 10px; font-weight: 700; letter-spacing: 2px; }
             QLabel#title { color: #29332d; font-size: 25px; font-weight: 700; }
             QLabel#muted { color: #7c877f; font-size: 12px; }
@@ -486,11 +490,15 @@ void MainWindow::applyTheme(bool dark) {
             QPushButton#primary { background: #657d6b; color: #ffffff; }
             QPushButton#primary:hover { background: #748d7a; }
             QPushButton#primary:pressed { background: #536c5a; }
-            QPushButton#secondary { background: #f2f5f1; color: #536257; border: 1px solid #e0e7df; }
+            QPushButton#secondary { background: #f3f6f1; color: #536257; border: 1px solid #e0e7df; }
+            QCheckBox { spacing: 10px; color: #405348; }
+            QSlider::groove:horizontal { height: 5px; background: #e0e7df; border-radius: 2px; }
+            QSlider::handle:horizontal { background: #657d6b; width: 15px; margin: -5px 0; border-radius: 7px; }
             QPushButton#secondary:hover { background: #e9efe8; }
             QPushButton#textButton { background: transparent; color: #78867b; }
             QPushButton#textButton:hover { background: #f0f3ef; color: #405348; }
             QStatusBar { background: #e9ede8; color: #78847b; font-size: 11px; }
+            QToolTip { background: #ffffff; color: #303832; border: 1px solid #dce5dc; padding: 6px 9px; border-radius: 6px; }
         )");
     }
 }
