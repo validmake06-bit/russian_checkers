@@ -6,6 +6,7 @@
 #include <QPropertyAnimation>
 class QFrame;
 class QScrollArea;
+class QGraphicsOpacityEffect;
 class QCheckBox;
 class QSlider;
 #include <QFutureWatcher>
@@ -45,6 +46,7 @@ private slots:
     void toggleGameDrawer(bool open);
 private:
     void refresh();
+    void navigateToPage(QWidget* page);
     void applyTheme(bool dark);
     void applySoundSettings(bool enabled, qreal volume);
     void playMoveSound(bool capture);
@@ -73,6 +75,10 @@ private:
     QWidget* messagePage_{};
     QWidget* messageReturnPage_{};
     QWidget* pageBeforeSettings_{};
+    QWidget* statisticsPage_{};
+    QPropertyAnimation* pageTransition_{};
+    QWidget* transitionTarget_{};
+    QGraphicsOpacityEffect* transitionEffect_{};
     QComboBox* themeSetting_{};
     QCheckBox* soundSetting_{};
     QSlider* soundVolumeSetting_{};
