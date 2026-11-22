@@ -825,45 +825,10 @@ void MainWindow::onAiFinished() {
 }
 
 void MainWindow::navigateToPage(QWidget* page) {
-    if (!page || !pages_) return;
-    if (pageTransition_) {
-        pageTransition_->stop();
-        if (transitionTarget_ && transitionTarget_->graphicsEffect() == transitionEffect_)
-            transitionTarget_->setGraphicsEffect(nullptr);
-        pageTransition_->deleteLater();
-        pageTransition_ = nullptr;
-        transitionTarget_ = nullptr;
-        transitionEffect_ = nullptr;
-    }
-    if (pages_->currentWidget() == page) return;
-
-    if (!animationsEnabled_) {
-        pages_->setCurrentWidget(page);
-        return;
-    }
-
-    auto* effect = new QGraphicsOpacityEffect(page);
-    effect->setOpacity(0.0);
-    page->setGraphicsEffect(effect);
+    if (!page || !pages_ || pages_->currentWidget() == page) return;
+    // Switch pages directly: a full-page opacity effect forces Qt to composite
+    // the entire board and side panel on every animation frame.
     pages_->setCurrentWidget(page);
-    auto* animation = new QPropertyAnimation(effect, "opacity", this);
-    animation->setDuration(155);
-    animation->setStartValue(0.0);
-    animation->setEndValue(1.0);
-    animation->setEasingCurve(QEasingCurve::OutCubic);
-    pageTransition_ = animation;
-    transitionTarget_ = page;
-    transitionEffect_ = effect;
-    connect(animation, &QPropertyAnimation::finished, this, [this, animation, page, effect] {
-        if (page && page->graphicsEffect() == effect) page->setGraphicsEffect(nullptr);
-        if (pageTransition_ == animation) {
-            pageTransition_ = nullptr;
-            transitionTarget_ = nullptr;
-            transitionEffect_ = nullptr;
-        }
-        animation->deleteLater();
-    });
-    animation->start();
 }
 
 void MainWindow::toggleTheme() {
@@ -881,6 +846,8 @@ void MainWindow::toggleGameDrawer(bool open) {
     drawerToggle_->setToolTip(drawerOpen_ ? QStringLiteral("Скрыть меню партии")
                                           : QStringLiteral("Открыть меню партии"));
     drawerAnimation_->stop();
+    drawerAnimation_->setDuration(animationsEnabled_
+        ? qMax(90, 180 * 100 / animationSpeedPercent_) : 1);
     drawerAnimation_->setStartValue(gameDrawerScroll_->maximumWidth());
     drawerAnimation_->setEndValue(drawerOpen_ ? 326 : 0);
     drawerAnimation_->start();
@@ -936,6 +903,8 @@ void MainWindow::applyTheme(bool dark) {
             QPushButton#primary { background: #c18d5d; color: #1d211d; }
             QPushButton#primary:hover { background: #d4a373; }
             QPushButton#primary:pressed { background: #a8754b; }
+            QPushButton#primary:disabled, QPushButton#secondary:disabled { background: #303a33; color: #89958a; border-color: #354139; }
+            QPushButton:focus-visible, QComboBox:focus, QListWidget:focus, QSlider:focus { outline: 2px solid #c18d5d; outline-offset: 2px; }
             QPushButton#secondary { background: #303d34; color: #f0e7da; border: 1px solid #46564a; }
             QPushButton#secondary:hover { background: #3a4b40; border-color: #bd956d; }
             QPushButton#textButton { background: transparent; color: #c3cdbf; }
@@ -987,6 +956,8 @@ void MainWindow::applyTheme(bool dark) {
             QPushButton#primary { background: #876044; color: #fffaf3; }
             QPushButton#primary:hover { background: #9a7353; }
             QPushButton#primary:pressed { background: #704d36; }
+            QPushButton#primary:disabled, QPushButton#secondary:disabled { background: #eee8df; color: #a39a8e; border-color: #e5ddd2; }
+            QPushButton:focus-visible, QComboBox:focus, QListWidget:focus, QSlider:focus { outline: 2px solid #98704e; outline-offset: 2px; }
             QPushButton#secondary { background: #f1e7da; color: #594633; border: 1px solid #e2d1bd; }
             QPushButton#secondary:hover { background: #ead9c4; border-color: #c7a27e; }
             QPushButton#textButton { background: transparent; color: #777c70; }
