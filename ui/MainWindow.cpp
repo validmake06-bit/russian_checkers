@@ -32,6 +32,7 @@
 #include <QMediaPlayer>
 #include <QAudioOutput>
 #include <algorithm>
+#include <cmath>
 
 using namespace checkers;
 
@@ -74,8 +75,8 @@ QString createSoundPack() {
         const double t = double(i) / rate;
         noise = noise * 1664525u + 1013904223u;
         const double random = (double((noise >> 8) & 0xffffu) / 32767.5) - 1.0;
-        const double thump = std::sin(2.0 * M_PI * 118.0 * t) * std::exp(-t * 34.0) * 0.42;
-        const double wood = std::sin(2.0 * M_PI * 245.0 * t) * std::exp(-t * 58.0) * 0.12;
+        const double thump = std::sin(2.0 * 3.14159265358979323846 * 118.0 * t) * std::exp(-t * 34.0) * 0.42;
+        const double wood = std::sin(2.0 * 3.14159265358979323846 * 245.0 * t) * std::exp(-t * 58.0) * 0.12;
         const double texture = random * std::exp(-t * 78.0) * 0.055;
         move.push_back(clampSample(thump + wood + texture));
     }
@@ -85,8 +86,8 @@ QString createSoundPack() {
     capture.reserve(rate / 4);
     for (int i = 0; i < rate / 4; ++i) {
         const double t = double(i) / rate;
-        const double thump = std::sin(2.0 * M_PI * 86.0 * t) * std::exp(-t * 23.0) * 0.48;
-        const double knock = std::sin(2.0 * M_PI * 174.0 * t) * std::exp(-t * 38.0) * 0.16;
+        const double thump = std::sin(2.0 * 3.14159265358979323846 * 86.0 * t) * std::exp(-t * 23.0) * 0.48;
+        const double knock = std::sin(2.0 * 3.14159265358979323846 * 174.0 * t) * std::exp(-t * 38.0) * 0.16;
         capture.push_back(clampSample(thump + knock));
     }
     save(QStringLiteral("wood_capture.wav"), capture);
@@ -96,8 +97,8 @@ QString createSoundPack() {
     for (int i = 0; i < rate / 16; ++i) {
         const double t = double(i) / rate;
         const double envelope = std::exp(-t * 125.0);
-        const double tone = std::sin(2.0 * M_PI * 920.0 * t) * 0.10
-                          + std::sin(2.0 * M_PI * 1480.0 * t) * 0.035;
+        const double tone = std::sin(2.0 * 3.14159265358979323846 * 920.0 * t) * 0.10
+                          + std::sin(2.0 * 3.14159265358979323846 * 1480.0 * t) * 0.035;
         click.push_back(clampSample(tone * envelope));
     }
     save(QStringLiteral("button_click.wav"), click);
@@ -121,11 +122,11 @@ QString createSoundPack() {
         const double blend = qBound(0.0, (local - 0.82) / 0.18, 1.0);
         double sample = 0.0;
         for (int n = 0; n < 4; ++n) {
-            const double a = std::sin(2.0 * M_PI * chords[chord][n] * t + n * 0.31);
-            const double b = std::sin(2.0 * M_PI * chords[(chord + 1) % 4][n] * t + n * 0.31);
+            const double a = std::sin(2.0 * 3.14159265358979323846 * chords[chord][n] * t + n * 0.31);
+            const double b = std::sin(2.0 * 3.14159265358979323846 * chords[(chord + 1) % 4][n] * t + n * 0.31);
             sample += ((1.0 - blend) * a + blend * b) * (n == 0 ? 0.115 : 0.072);
         }
-        const double slowBreath = 0.88 + 0.12 * std::sin(2.0 * M_PI * t / 11.0);
+        const double slowBreath = 0.88 + 0.12 * std::sin(2.0 * 3.14159265358979323846 * t / 11.0);
         const double edge = qMin(1.0, qMin(t / 0.45, (16.0 - t) / 0.45));
         ambient.push_back(clampSample(sample * slowBreath * qBound(0.0, edge, 1.0) * 0.48));
     }
@@ -596,7 +597,7 @@ void MainWindow::applyTheme(bool dark) {
     QSettings().setValue(QStringLiteral("appearance/darkTheme"), darkTheme_);
     boardView_->setDarkTheme(darkTheme_);
     themeButton_->setText(darkTheme_ ? QStringLiteral("Светлая тема") : QStringLiteral("Тёмная тема"));
-    if (homePage_) { const auto labels = homePage_->findChildren<QPushButton*>(); for (auto* b : labels) if (b->text().contains(QStringLiteral("тему"))) b->setText(darkTheme_ ? QStringLiteral("Переключить на светлую тему") : QStringLiteral("Переключить на тёмную тему")); }
+    if (homePage_) { const auto labels = homePage_->findChildren<QPushButton*>(); for (auto* b : labels) if (b->text().contains(QStringLiteral("тема"))) b->setText(darkTheme_ ? QStringLiteral("Переключить на светлую тему") : QStringLiteral("Переключить на тёмную тему")); }
     soundButton_->setText(soundsEnabled_ ? QStringLiteral("Звук включён") : QStringLiteral("Звук выключен"));
 
     if (darkTheme_) {
