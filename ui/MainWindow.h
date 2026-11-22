@@ -92,6 +92,7 @@ private:
     QSoundEffect* captureSound_{};
     QSoundEffect* victorySound_{};
     QSoundEffect* defeatSound_{};
+    QSoundEffect* buttonSound_{};
     bool soundsEnabled_{true};
     qreal soundVolume_{0.55};
     checkers::Board board_;
