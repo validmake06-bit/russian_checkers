@@ -163,9 +163,8 @@ void BoardWidget::paintEvent(QPaintEvent*) {
         p.restore();
     }
     if (animating_ && animatedSquare_>=0) {
-        const Piece piece=board_.at(animatedSquare_);
-        // The piece is already on its destination in board_; render it at the animated position instead.
-        drawPiece(p,animatedPosition_,isWhite(piece),isKing(piece),cell*.37);
+        // Render the moving piece at the interpolated position, not at its final square.
+        drawPiece(p,animatedPosition_,isWhite(movingPiece_),isKing(movingPiece_),cell*.37);
     }
 }
 
