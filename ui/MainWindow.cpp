@@ -902,9 +902,9 @@ void MainWindow::applyTheme(bool dark) {
             QLabel#status { background: #2b3830; color: #f3e8d8; border: 1px solid #45564a; border-radius: 12px; padding: 13px; font-size: 14px; font-weight: 600; }
             QLabel#stats { color: #c1cdbf; background: #2b3830; border-radius: 10px; padding: 10px; font-size: 11px; }
             QLabel#replayGameName { color: #f1e5d5; font-size: 16px; font-weight: 700; letter-spacing: 0; }
-            QLabel#replayMeta { color: #c3cec4; font-size: 12px; line-height: 1.35; }
+            QLabel#replayMeta { color: #c3cec4; font-size: 12px; }
             QLabel#replayMove { background: #2b3830; color: #f5eadc; border: 1px solid #45564a; border-radius: 12px; padding: 14px; font-size: 15px; font-weight: 650; }
-            QLabel#replayHint { color: #bac5bb; font-size: 11px; line-height: 1.4; }
+            QLabel#replayHint { color: #bac5bb; font-size: 11px; }
             QFrame#separator { color: #3a473e; max-height: 1px; }
             QComboBox, QListWidget, QTextEdit { background: #18211c; color: #f1e8dc; border: 1px solid #3b4a40; border-radius: 10px; padding: 9px 11px; min-height: 22px; selection-background-color: #72543b; }
             QComboBox:hover, QListWidget:hover { border-color: #c49a70; }
@@ -973,9 +973,9 @@ void MainWindow::applyTheme(bool dark) {
             QLabel#status { background: #f0f3ed; color: #4d5e50; border: 1px solid #dfe6dc; border-radius: 12px; padding: 13px; font-size: 14px; font-weight: 600; }
             QLabel#stats { color: #617365; background: #edf1eb; border-radius: 10px; padding: 10px; font-size: 11px; }
             QLabel#replayGameName { color: #423529; font-size: 16px; font-weight: 700; letter-spacing: 0; }
-            QLabel#replayMeta { color: #756858; font-size: 12px; line-height: 1.35; }
+            QLabel#replayMeta { color: #756858; font-size: 12px; }
             QLabel#replayMove { background: #f0e9df; color: #493b2e; border: 1px solid #e1d4c4; border-radius: 12px; padding: 14px; font-size: 15px; font-weight: 650; }
-            QLabel#replayHint { color: #766959; font-size: 11px; line-height: 1.4; }
+            QLabel#replayHint { color: #766959; font-size: 11px; }
             QFrame#separator { color: #e9e0d4; max-height: 1px; }
             QComboBox, QListWidget, QTextEdit { background: #fffdf9; color: #3c3026; border: 1px solid #e4d9ca; border-radius: 10px; padding: 9px 11px; min-height: 22px; selection-background-color: #e9d8c2; }
             QComboBox:hover, QListWidget:hover { border-color: #b58b66; }
@@ -1141,6 +1141,7 @@ void MainWindow::openSettings() {
                 makeSliderControl(soundVolumeSetting_, soundValue));
         connect(soundVolumeSetting_, &QSlider::valueChanged, soundValue,
                 [soundValue](int value) { soundValue->setText(QStringLiteral("%1%").arg(value)); });
+        connect(soundSetting_, &QCheckBox::toggled, soundVolumeSetting_, &QSlider::setEnabled);
 
         musicSetting_ = new QCheckBox(QStringLiteral("Включить фоновую музыку"), card);
         musicSetting_->setObjectName("settingsMusic");
@@ -1155,6 +1156,7 @@ void MainWindow::openSettings() {
                 makeSliderControl(musicVolumeSetting_, musicValue));
         connect(musicVolumeSetting_, &QSlider::valueChanged, musicValue,
                 [musicValue](int value) { musicValue->setText(QStringLiteral("%1%").arg(value)); });
+        connect(musicSetting_, &QCheckBox::toggled, musicVolumeSetting_, &QSlider::setEnabled);
 
         auto* motion = makeSection(QStringLiteral("ДВИЖЕНИЕ И АНИМАЦИИ"),
             QStringLiteral("Выберите комфортную скорость перемещения шашек и переходов."));
@@ -1221,8 +1223,10 @@ void MainWindow::openSettings() {
     themeSetting_->setCurrentIndex(darkTheme_ ? 1 : 0);
     soundSetting_->setChecked(soundsEnabled_);
     soundVolumeSetting_->setValue(qRound(soundVolume_ * 100.0));
+    soundVolumeSetting_->setEnabled(soundsEnabled_);
     musicSetting_->setChecked(musicEnabled_);
     musicVolumeSetting_->setValue(qRound(musicVolume_ * 100.0));
+    musicVolumeSetting_->setEnabled(musicEnabled_);
     animationSetting_->setChecked(animationsEnabled_);
     animationSpeedSetting_->setValue(animationSpeedPercent_);
     animationSpeedSetting_->setEnabled(animationsEnabled_);
@@ -1723,6 +1727,8 @@ void MainWindow::showReplay(qint64 replayGameId, const QString& gameTitle, QWidg
         auto* button = new QPushButton(caption, panel);
         button->setObjectName("secondary");
         button->setMinimumHeight(44);
+        button->setMinimumWidth(58);
+        button->setFont(QFont(QStringLiteral("Segoe UI Symbol"), 16));
         button->setToolTip(tip);
         return button;
     };
