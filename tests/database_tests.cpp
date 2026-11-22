@@ -51,7 +51,7 @@ int main(int argc, char* argv[]) {
             QStringLiteral("Tester"), QStringLiteral("correct-horse-battery"), &error);
         if (reopenedUserId != userId)
             std::cerr << "Reopened login failed: id=" << reopenedUserId
-                      << ", expected=" << userId << ", error=" << error.toStdString() << '\\n';
+                      << ", expected=" << userId << ", error=" << error.toStdString() << '\n';
         CHECK(reopenedUserId == userId);
         const QString statistics = reopened.userStatistics(userId, &error);
         CHECK(statistics.contains(QStringLiteral("Всего партий: 1")));
