@@ -20,7 +20,8 @@ jobs:
           target: desktop
           arch: win64_mingw
           modules: qtmultimedia
-          tools: 'tools_mingw,qt.tools.win64_mingw1310'
+          # Qt 6.8.3 uses the MinGW 13.1.0 tool package.
+          tools: 'tools_mingw1310,qt.tools.win64_mingw1310'
           cache: true
 
       - name: Configure
