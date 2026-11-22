@@ -75,13 +75,32 @@ bool Database::initializeSchema(QString* error) {
         }
     }
 
+    // Add a persistent favorite flag without breaking existing user databases.
+    bool hasFavorite = false;
+    QSqlQuery gameColumns(db_);
+    if (!gameColumns.exec(QStringLiteral("PRAGMA table_info(games)"))) {
+        if (error) *error = gameColumns.lastError().text();
+        return false;
+    }
+    while (gameColumns.next())
+        if (gameColumns.value(1).toString() == QStringLiteral("is_favorite")) hasFavorite = true;
+    gameColumns.finish();
+    if (!hasFavorite) {
+        QSqlQuery alterGames(db_);
+        if (!alterGames.exec(QStringLiteral(
+            "ALTER TABLE games ADD COLUMN is_favorite INTEGER NOT NULL DEFAULT 0"))) {
+            if (error) *error = alterGames.lastError().text();
+            return false;
+        }
+    }
+
     // Apply the retention policy to databases upgraded from older versions too.
     QSqlQuery pruneExisting(db_);
     if (!pruneExisting.exec(QStringLiteral(
-        "DELETE FROM games WHERE finished_at IS NOT NULL AND id IN ("
-        " SELECT old.id FROM games old WHERE old.finished_at IS NOT NULL "
+        "DELETE FROM games WHERE finished_at IS NOT NULL AND is_favorite=0 AND id IN ("
+        " SELECT old.id FROM games old WHERE old.finished_at IS NOT NULL AND old.is_favorite=0 "
         " AND old.id NOT IN (SELECT recent.id FROM games recent "
-        " WHERE recent.user_id=old.user_id AND recent.finished_at IS NOT NULL "
+        " WHERE recent.user_id=old.user_id AND recent.finished_at IS NOT NULL AND recent.is_favorite=0 "
         " ORDER BY recent.finished_at DESC, recent.id DESC LIMIT 50))"))) {
         if (error) *error = pruneExisting.lastError().text();
         return false;
@@ -260,7 +279,7 @@ bool Database::finishGame(qint64 gameId, const QString& result, QString* error) 
     prune.prepare(QStringLiteral(
         "DELETE FROM games WHERE id IN ("
         " SELECT id FROM games WHERE user_id=(SELECT user_id FROM games WHERE id=?) "
-        " AND finished_at IS NOT NULL "
+        " AND finished_at IS NOT NULL AND is_favorite=0 "
         " ORDER BY finished_at DESC, id DESC LIMIT -1 OFFSET 50)"));
     prune.addBindValue(gameId);
     if (!prune.exec()) {
@@ -344,10 +363,13 @@ bool Database::getRecentGames(qint64 userId, QList<RecentGameRecord>* games, QSt
     QSqlQuery query(db_);
     query.prepare(QStringLiteral(
         "SELECT g.id, g.started_at, COALESCE(g.finished_at, ''), g.human_side, "
-        "g.difficulty, g.result, COUNT(m.id) "
+        "g.difficulty, g.result, COUNT(m.id), g.is_favorite "
         "FROM games g LEFT JOIN moves m ON m.game_id=g.id "
-        "WHERE g.user_id=? GROUP BY g.id "
-        "ORDER BY g.started_at DESC, g.id DESC LIMIT 50"));
+        "WHERE g.user_id=? AND (g.is_favorite=1 OR g.id IN ("
+        " SELECT recent.id FROM games recent WHERE recent.user_id=? "
+        " ORDER BY recent.started_at DESC, recent.id DESC LIMIT 50)) "
+        "GROUP BY g.id ORDER BY g.is_favorite DESC, g.started_at DESC, g.id DESC"));
+    query.addBindValue(userId);
     query.addBindValue(userId);
     if (!query.exec()) {
         if (error) *error = query.lastError().text();
@@ -362,7 +384,30 @@ bool Database::getRecentGames(qint64 userId, QList<RecentGameRecord>* games, QSt
         record.difficulty = query.value(4).toInt();
         record.result = query.value(5).toString();
         record.moveCount = query.value(6).toLongLong();
+        record.isFavorite = query.value(7).toBool();
         games->push_back(record);
+    }
+    return true;
+}
+
+bool Database::setGameFavorite(qint64 userId, qint64 gameId, bool favorite, QString* error) {
+    if (userId <= 0 || gameId <= 0) {
+        if (error) *error = QStringLiteral("Некорректная партия для изменения избранного.");
+        return false;
+    }
+    QSqlQuery query(db_);
+    query.prepare(QStringLiteral(
+        "UPDATE games SET is_favorite=? WHERE id=? AND user_id=?"));
+    query.addBindValue(favorite ? 1 : 0);
+    query.addBindValue(gameId);
+    query.addBindValue(userId);
+    if (!query.exec()) {
+        if (error) *error = query.lastError().text();
+        return false;
+    }
+    if (query.numRowsAffected() != 1) {
+        if (error) *error = QStringLiteral("Партия не найдена.");
+        return false;
     }
     return true;
 }
