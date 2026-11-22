@@ -81,7 +81,9 @@ namespace {
 QByteArray hmacSha256(const QByteArray& keyInput, const QByteArray& message) {
     QByteArray key = keyInput;
     if (key.size() > 64) key = QCryptographicHash::hash(key, QCryptographicHash::Sha256);
-    key.resize(64);
+    // HMAC requires zero-padding short keys. Append explicit zero bytes rather
+    // than relying on the contents of newly resized QByteArray storage.
+    if (key.size() < 64) key.append(QByteArray(64 - key.size(), char(0)));
     QByteArray innerPad(64, char(0x36));
     QByteArray outerPad(64, char(0x5c));
     for (int i = 0; i < 64; ++i) {
