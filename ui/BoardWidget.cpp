@@ -7,6 +7,7 @@
 using namespace checkers;
 
 BoardWidget::BoardWidget(QWidget* parent) : QWidget(parent) {
+    setAttribute(Qt::WA_TranslucentBackground);
     setMinimumSize(420, 420);
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     animation_.setDuration(240);
@@ -178,7 +179,7 @@ void BoardWidget::paintEvent(QPaintEvent*) {
         backgroundCache_ = QPixmap(QSize(qMax(1, qRound(width() * dpr)),
                                          qMax(1, qRound(height() * dpr))));
         backgroundCache_.setDevicePixelRatio(dpr);
-        backgroundCache_.fill(darkTheme_ ? QColor("#241812") : QColor("#f4eadc"));
+        backgroundCache_.fill(Qt::transparent);
         QPainter surface(&backgroundCache_);
         surface.setRenderHint(QPainter::Antialiasing);
 
