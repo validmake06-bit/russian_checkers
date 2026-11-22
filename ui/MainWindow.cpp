@@ -465,74 +465,96 @@ MainWindow::MainWindow(Database& database, qint64 userId, QString username, QWid
     // A calmer, more deliberate start screen with a warm visual focal point.
     homePage_ = new CheckersBackdrop(this);
     auto* homeLayout = new QVBoxLayout(homePage_);
-    homeLayout->setContentsMargins(34, 24, 34, 24);
+    homeLayout->setContentsMargins(30, 20, 30, 20);
     homeLayout->addStretch(1);
 
     auto* homeCard = new QFrame(homePage_);
     homeCard->setObjectName("homeCard");
-    homeCard->setMaximumWidth(560);
+    homeCard->setMaximumWidth(900);
     auto* homeShadow = new QGraphicsDropShadowEffect(homeCard);
-    homeShadow->setBlurRadius(46);
-    homeShadow->setOffset(0, 17);
-    homeShadow->setColor(QColor(20, 14, 9, 74));
+    homeShadow->setBlurRadius(34);
+    homeShadow->setOffset(0, 12);
+    homeShadow->setColor(QColor(20, 14, 9, 58));
     homeCard->setGraphicsEffect(homeShadow);
-    auto* homeCardLayout = new QVBoxLayout(homeCard);
-    homeCardLayout->setContentsMargins(48, 36, 48, 34);
-    homeCardLayout->setSpacing(13);
+    auto* homeCardLayout = new QHBoxLayout(homeCard);
+    homeCardLayout->setContentsMargins(38, 34, 38, 34);
+    homeCardLayout->setSpacing(34);
 
+    auto* heroColumn = new QVBoxLayout;
+    heroColumn->setSpacing(12);
     auto* homeBrand = new QLabel(QStringLiteral("RUSSIAN CHECKERS  /  CLASSIC"), homeCard);
     homeBrand->setObjectName("brand");
-    homeBrand->setAlignment(Qt::AlignCenter);
     auto* homeAccent = new QFrame(homeCard);
     homeAccent->setObjectName("homeAccent");
-    homeAccent->setFixedSize(84, 3);
+    homeAccent->setFixedSize(68, 3);
     auto* homeEmblem = new QLabel(QStringLiteral("♟"), homeCard);
     homeEmblem->setObjectName("homeEmblem");
-    homeEmblem->setAlignment(Qt::AlignCenter);
-    auto* homeTitle = new QLabel(QStringLiteral("Русские шашки"), homeCard);
+    homeEmblem->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    auto* homeTitle = new QLabel(QStringLiteral("Русские\nшашки"), homeCard);
     homeTitle->setObjectName("homeTitle");
-    homeTitle->setAlignment(Qt::AlignCenter);
-    auto* homeSubtitle = new QLabel(QStringLiteral("Спокойная партия. Чистая стратегия."), homeCard);
+    auto* homeSubtitle = new QLabel(QStringLiteral("Классическая стратегия.\nНовая партия — в один ход."), homeCard);
     homeSubtitle->setObjectName("homeSubtitle");
-    homeSubtitle->setAlignment(Qt::AlignCenter);
+    homeSubtitle->setWordWrap(true);
     homeUserLabel_ = new QLabel(QStringLiteral("Вы вошли как  ·  %1").arg(username_), homeCard);
     homeUserLabel_->setObjectName("userLabel");
-    homeUserLabel_->setAlignment(Qt::AlignCenter);
+    homeUserLabel_->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    heroColumn->addStretch(1);
+    heroColumn->addWidget(homeBrand);
+    heroColumn->addSpacing(6);
+    heroColumn->addWidget(homeEmblem);
+    heroColumn->addWidget(homeAccent);
+    heroColumn->addWidget(homeTitle);
+    heroColumn->addWidget(homeSubtitle);
+    heroColumn->addSpacing(8);
+    heroColumn->addWidget(homeUserLabel_);
+    heroColumn->addStretch(1);
 
-    homeStart_ = new QPushButton(QStringLiteral("Начать партию"), homeCard);
+    auto* homeActions = new QFrame(homeCard);
+    homeActions->setObjectName("homeActions");
+    auto* actionsColumn = new QVBoxLayout(homeActions);
+    actionsColumn->setContentsMargins(22, 22, 22, 22);
+    actionsColumn->setSpacing(10);
+    auto* actionsEyebrow = new QLabel(QStringLiteral("ВАШ СЛЕДУЮЩИЙ ХОД"), homeActions);
+    actionsEyebrow->setObjectName("sectionTitle");
+    auto* actionsTitle = new QLabel(QStringLiteral("Продолжим?"), homeActions);
+    actionsTitle->setObjectName("homeActionsTitle");
+    auto* actionsHint = new QLabel(QStringLiteral("Выберите действие и возвращайтесь к доске."), homeActions);
+    actionsHint->setObjectName("homeActionsHint");
+    actionsHint->setWordWrap(true);
+
+    homeStart_ = new QPushButton(QStringLiteral("Начать партию"), homeActions);
     homeStart_->setObjectName("primary");
-    homeStart_->setMinimumHeight(56);
-    homeLogin_ = new QPushButton(QStringLiteral("Войти в аккаунт"), homeCard);
+    homeStart_->setMinimumHeight(54);
+    homeLogin_ = new QPushButton(QStringLiteral("Войти в аккаунт"), homeActions);
     homeLogin_->setObjectName("secondary");
-    homeLogin_->setMinimumHeight(48);
+    homeLogin_->setMinimumHeight(46);
     homeLogin_->setVisible(userId_ < 0);
-    auto* homeStats = new QPushButton(QStringLiteral("Моя статистика"), homeCard);
+    auto* homeStats = new QPushButton(QStringLiteral("Моя статистика"), homeActions);
     homeStats->setObjectName("secondary");
-    homeStats->setMinimumHeight(48);
-    auto* homeSettings = new QPushButton(QStringLiteral("Настройки"), homeCard);
+    homeStats->setMinimumHeight(46);
+    auto* homeSettings = new QPushButton(QStringLiteral("Настройки"), homeActions);
     homeSettings->setObjectName("secondary");
-    homeSettings->setMinimumHeight(48);
-    auto* homeTheme = new QPushButton(homeCard);
+    homeSettings->setMinimumHeight(46);
+    auto* homeTheme = new QPushButton(homeActions);
     homeTheme->setObjectName("textButton");
     homeTheme->setText(darkTheme_ ? QStringLiteral("Светлая тема") : QStringLiteral("Тёмная тема"));
+
+    actionsColumn->addWidget(actionsEyebrow);
+    actionsColumn->addWidget(actionsTitle);
+    actionsColumn->addWidget(actionsHint);
+    actionsColumn->addSpacing(8);
+    actionsColumn->addWidget(homeStart_);
+    actionsColumn->addWidget(homeLogin_);
+    actionsColumn->addWidget(homeStats);
+    actionsColumn->addWidget(homeSettings);
+    actionsColumn->addStretch(1);
+    actionsColumn->addWidget(homeTheme);
+    homeCardLayout->addLayout(heroColumn, 1);
+    homeCardLayout->addWidget(homeActions, 1);
+
     auto* homeFooter = new QLabel(QStringLiteral("РУССКИЕ ШАШКИ  ·  ВЕРСИЯ 0.7"), homePage_);
     homeFooter->setObjectName("homeFooter");
     homeFooter->setAlignment(Qt::AlignCenter);
-
-    homeCardLayout->addWidget(homeBrand);
-    homeCardLayout->addWidget(homeAccent, 0, Qt::AlignHCenter);
-    homeCardLayout->addSpacing(5);
-    homeCardLayout->addWidget(homeEmblem);
-    homeCardLayout->addWidget(homeTitle);
-    homeCardLayout->addWidget(homeSubtitle);
-    homeCardLayout->addSpacing(7);
-    homeCardLayout->addWidget(homeUserLabel_);
-    homeCardLayout->addSpacing(9);
-    homeCardLayout->addWidget(homeStart_);
-    homeCardLayout->addWidget(homeLogin_);
-    homeCardLayout->addWidget(homeStats);
-    homeCardLayout->addWidget(homeSettings);
-    homeCardLayout->addWidget(homeTheme);
     homeLayout->addWidget(homeCard, 0, Qt::AlignHCenter);
     homeLayout->addStretch(1);
     homeLayout->addWidget(homeFooter);
@@ -885,11 +907,14 @@ void MainWindow::applyTheme(bool dark) {
         setStyleSheet(R"(
             QMainWindow, QWidget#appBackground { background: #141a16; color: #f2eadf; }
             QWidget#homeBackground { background: transparent; }
-            QFrame#homeCard { background: rgba(25,34,29,238); border: 1px solid rgba(213,167,119,115); border-radius: 28px; }
+            QFrame#homeCard { background: #1b251f; border: 1px solid #39483d; border-radius: 24px; }
+            QFrame#homeActions { background: #222f27; border: 1px solid #39483d; border-radius: 18px; }
+            QLabel#homeActionsTitle { color: #f4eadc; font-size: 23px; font-weight: 700; }
+            QLabel#homeActionsHint { color: #b8c4b9; font-size: 12px; }
             QFrame#homeAccent { background: #d5a777; border: 0; border-radius: 1px; }
             QLabel#brand { color: #d1a77d; font-size: 10px; font-weight: 700; letter-spacing: 2px; }
-            QLabel#homeEmblem { color: #d5a777; font-size: 68px; }
-            QLabel#homeTitle { color: #fff4e7; font-size: 38px; font-weight: 750; }
+            QLabel#homeEmblem { color: #d5a777; font-size: 82px; }
+            QLabel#homeTitle { color: #fff4e7; font-size: 34px; font-weight: 750; }
             QLabel#homeSubtitle { color: #c4b6a5; font-size: 14px; }
             QLabel#homeFooter { color: #a99a87; font-size: 10px; font-weight: 600; letter-spacing: 2px; }
             QFrame#sidePanel, QFrame#statCard { background: #202a24; border: 1px solid #35443a; border-radius: 20px; }
@@ -933,11 +958,14 @@ void MainWindow::applyTheme(bool dark) {
         setStyleSheet(R"(
             QMainWindow, QWidget#appBackground { background: #f3eee6; color: #352c24; }
             QWidget#homeBackground { background: transparent; }
-            QFrame#homeCard { background: rgba(255,251,245,242); border: 1px solid rgba(143,104,69,90); border-radius: 28px; }
+            QFrame#homeCard { background: #fffaf3; border: 1px solid #e3d5c4; border-radius: 24px; }
+            QFrame#homeActions { background: #f6eee3; border: 1px solid #e6d8c7; border-radius: 18px; }
+            QLabel#homeActionsTitle { color: #352c24; font-size: 23px; font-weight: 700; }
+            QLabel#homeActionsHint { color: #776757; font-size: 12px; }
             QFrame#homeAccent { background: #9b704e; border: 0; border-radius: 1px; }
             QLabel#brand { color: #8f6748; font-size: 10px; font-weight: 700; letter-spacing: 2px; }
-            QLabel#homeEmblem { color: #946b49; font-size: 68px; }
-            QLabel#homeTitle { color: #35271d; font-size: 38px; font-weight: 750; }
+            QLabel#homeEmblem { color: #946b49; font-size: 82px; }
+            QLabel#homeTitle { color: #35271d; font-size: 34px; font-weight: 750; }
             QLabel#homeSubtitle { color: #806b59; font-size: 14px; }
             QLabel#homeFooter { color: #927b65; font-size: 10px; font-weight: 600; letter-spacing: 2px; }
             QFrame#sidePanel, QFrame#statCard { background: #fffaf3; border: 1px solid #e7ddcf; border-radius: 20px; }
