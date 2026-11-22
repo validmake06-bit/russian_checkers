@@ -5,6 +5,7 @@
 #include <QLabel>
 #include <QListWidget>
 #include <QPushButton>
+#include <QToolButton>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QFrame>
@@ -189,11 +190,22 @@ MainWindow::MainWindow(Database& database, qint64 userId, QString username, QWid
     boardView_->setObjectName("boardView");
     boardGrid->addWidget(boardView_, 0, 0);
 
-    drawerToggle_ = new QPushButton(QStringLiteral("☰"), boardContainer);
+    drawerToggle_ = new QToolButton(boardContainer);
     drawerToggle_->setObjectName("drawerToggle");
-    drawerToggle_->setFixedSize(48, 44);
+    drawerToggle_->setText(QStringLiteral("☰"));
+    drawerToggle_->setToolButtonStyle(Qt::ToolButtonTextOnly);
+    drawerToggle_->setFixedSize(48, 48);
+    drawerToggle_->setCursor(Qt::PointingHandCursor);
+    drawerToggle_->setFocusPolicy(Qt::NoFocus);
     drawerToggle_->setToolTip(QStringLiteral("Открыть меню партии"));
+    drawerToggle_->setStyleSheet(
+        "QToolButton#drawerToggle { background-color: #ead8c2; color: #3b271d; "
+        "border: 1px solid #c5a98b; border-radius: 14px; font-family: 'Segoe UI'; "
+        "font-size: 23px; font-weight: 700; padding: 0px; }"
+        "QToolButton#drawerToggle:hover { background-color: #fff0dc; }"
+        "QToolButton#drawerToggle:pressed { background-color: #c9a27d; padding-top: 2px; }");
     boardGrid->addWidget(drawerToggle_, 0, 0, Qt::AlignTop | Qt::AlignLeft);
+    drawerToggle_->raise();
     root->addWidget(boardContainer, 1);
 
     auto* panel = new QFrame(central);
@@ -297,8 +309,9 @@ MainWindow::MainWindow(Database& database, qint64 userId, QString username, QWid
     drawerScroll->setWidget(panel);
     drawerScroll->setWidgetResizable(true);
     drawerScroll->setFrameShape(QFrame::NoFrame);
+    drawerScroll->setStyleSheet("QScrollArea#drawerScroll { border: 0; background: transparent; } QScrollBar:vertical { width: 0px; }");
     drawerScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    drawerScroll->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    drawerScroll->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     drawerScroll->setFixedWidth(0);
     gameDrawerScroll_ = drawerScroll;
     root->addWidget(drawerScroll);
@@ -440,7 +453,7 @@ MainWindow::MainWindow(Database& database, qint64 userId, QString username, QWid
     const auto buttons = findChildren<QPushButton*>();
     for (QPushButton* button : buttons) addButtonFeedback(button, buttonSound_);
     applyTheme(darkTheme_);
-    for (QPushButton* button : {drawerToggle_}) addButtonFeedback(button, buttonSound_);
+
     connect(boardView_, &BoardWidget::animationFinished, this, [this] {
         if (aiThinking_ || gameOver()) return;
         if (sideToMove_ == humanSide_) refresh();
@@ -657,8 +670,6 @@ void MainWindow::applyTheme(bool dark) {
     if (darkTheme_) {
         setStyleSheet(R"(
             QMainWindow, QWidget#appBackground { background: #241812; color: #f0e2cf; font-family: "Segoe UI"; font-size: 13px; }
-            QPushButton#drawerToggle { background: #ead8c2; color: #3b271d; border: 1px solid #c5a98b; border-radius: 13px; font-size: 22px; font-weight: 700; margin: 14px; }
-            QPushButton#drawerToggle:hover { background: #fff0dc; }
             QScrollArea#drawerScroll { background: transparent; border: 0; }
             QWidget#homeBackground { background: qradialgradient(cx:0.82, cy:0.16, radius:0.95, fx:0.82, fy:0.16, stop:0 #72513b, stop:0.46 #3b281f, stop:1 #1d130f); }
             QFrame#homeCard { background: rgba(27, 36, 31, 238); border: 1px solid #c5a98b; border-radius: 26px; }
@@ -710,8 +721,6 @@ void MainWindow::applyTheme(bool dark) {
     } else {
         setStyleSheet(R"(
             QMainWindow, QWidget#appBackground { background: #f4eadc; color: #3c281d; font-family: "Segoe UI"; font-size: 13px; }
-            QPushButton#drawerToggle { background: #fff9ef; color: #5a3925; border: 1px solid #d6bea2; border-radius: 13px; font-size: 22px; font-weight: 700; margin: 14px; }
-            QPushButton#drawerToggle:hover { background: #ead8c2; }
             QScrollArea#drawerScroll { background: transparent; border: 0; }
             QWidget#homeBackground { background: qradialgradient(cx:0.82, cy:0.16, radius:0.95, fx:0.82, fy:0.16, stop:0 #e9d6bd, stop:0.48 #f0e1cc, stop:1 #e6d0b5); }
             QFrame#homeCard { background: rgba(255, 255, 251, 246); border: 1px solid #d6bea2; border-radius: 26px; }
