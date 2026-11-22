@@ -2,6 +2,7 @@
 #include "BoardWidget.h"
 #include "AI.h"
 #include <QMainWindow>
+#include <QToolButton>
 #include <QPropertyAnimation>
 class QFrame;
 class QScrollArea;
@@ -65,7 +66,7 @@ private:
     QWidget* gamePage_{};
     QFrame* gameDrawer_{};
     QScrollArea* gameDrawerScroll_{};
-    QPushButton* drawerToggle_{};
+    QToolButton* drawerToggle_{};
     QPropertyAnimation* drawerAnimation_{};
     bool drawerOpen_{false};
     QWidget* settingsPage_{};
