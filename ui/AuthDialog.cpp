@@ -143,7 +143,7 @@ AuthDialog::AuthDialog(Database& database, QWidget* parent)
     const bool dark = QSettings().value(QStringLiteral("appearance/darkTheme"), false).toBool();
     if (dark) {
         setStyleSheet(R"(
-            QWidget#authPage { background: #241812; color: #f4eadc; font-family: "Segoe UI"; }
+            QWidget#authPage { background: #241812; color: #f4eadc; }
             QLabel#brand { color: #b58c68; font-size: 11px; font-weight: 700; letter-spacing: 2px; }
             QLabel#heroTitle { color: #fff4e4; font-size: 27px; font-weight: 700; }
             QLabel#heroSubtitle { color: #d7c0a7; font-size: 13px; }
@@ -161,7 +161,7 @@ AuthDialog::AuthDialog(Database& database, QWidget* parent)
         )");
     } else {
         setStyleSheet(R"(
-            QWidget#authPage { background: #f4eadc; color: #3c281d; font-family: "Segoe UI"; }
+            QWidget#authPage { background: #f4eadc; color: #3c281d; }
             QLabel#brand { color: #946b49; font-size: 11px; font-weight: 700; letter-spacing: 2px; }
             QLabel#heroTitle { color: #3b271d; font-size: 27px; font-weight: 700; }
             QLabel#heroSubtitle { color: #806653; font-size: 13px; }
