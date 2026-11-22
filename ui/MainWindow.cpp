@@ -186,17 +186,20 @@ void animateEntrance(QWidget* widget, QObject* owner, int delayMs) {
     });
 }
 
+void animateCardEntrance(QFrame* card, QObject* owner, int firstDelay = 35,
+                          int stepDelay = 38) {
+    if (!card) return;
+    const auto children = card->findChildren<QWidget*>(QString(), Qt::FindDirectChildrenOnly);
+    int delay = firstDelay;
+    for (QWidget* child : children) {
+        animateEntrance(child, owner, delay);
+        delay += stepDelay;
+    }
+}
+
 void animateHomeEntrance(QWidget* homePage, QObject* owner) {
     if (!homePage) return;
-    auto* card = homePage->findChild<QFrame*>(QStringLiteral("homeCard"));
-    if (card) {
-        const auto children = card->findChildren<QWidget*>(QString(), Qt::FindDirectChildrenOnly);
-        int delay = 35;
-        for (QWidget* child : children) {
-            animateEntrance(child, owner, delay);
-            delay += 38;
-        }
-    }
+    animateCardEntrance(homePage->findChild<QFrame*>(QStringLiteral("homeCard")), owner);
     if (auto* footer = homePage->findChild<QLabel*>(QStringLiteral("homeFooter")))
         animateEntrance(footer, owner, 180);
 }
@@ -1145,6 +1148,7 @@ void MainWindow::openSettings() {
     animationSetting_->setChecked(animationsEnabled_);
     animationSpeedSetting_->setValue(animationSpeedPercent_);
     navigateToPage(settingsPage_);
+    animateCardEntrance(settingsPage_->findChild<QFrame*>(QStringLiteral("sidePanel")), this, 30, 34);
 }
 void MainWindow::showHome() {
     if (aiThinking_) return;
@@ -1225,6 +1229,7 @@ void MainWindow::showInlinePrompt(const QString& title, const QString& message,
     outer->addStretch(1);
     pages_->addWidget(messagePage_);
     navigateToPage(messagePage_);
+    animateCardEntrance(card, this, 30, 32);
 
     auto finish = [this, callback](bool accepted) {
         QWidget* returnPage = messageReturnPage_ ? messageReturnPage_ : homePage_;
@@ -1374,6 +1379,7 @@ void MainWindow::showStatistics() {
 
     pages_->addWidget(page);
     navigateToPage(page);
+    animateCardEntrance(card, this, 30, 30);
     connect(back, &QPushButton::clicked, this, [this, page] {
         navigateToPage(homePage_);
         pages_->removeWidget(page);
