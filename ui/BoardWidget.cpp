@@ -206,7 +206,7 @@ void BoardWidget::paintEvent(QPaintEvent*) {
     p.setPen(darkTheme_ ? QColor("#d9c1a4") : QColor("#80664d"));
     for (int index = 0; index < 8; ++index) {
         const QString rank = QString::number(8 - index);
-        const QString file(QChar(QLatin1Char('a').unicode() + index));
+        const QString file = QStringLiteral("abcdefgh").mid(index, 1);
         p.drawText(QRectF(left - 28, top + index * cell, 18, cell),
                    Qt::AlignCenter, rank);
         p.drawText(QRectF(left + index * cell, top + side + 10, cell, 18),
