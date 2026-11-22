@@ -168,62 +168,14 @@ void addButtonFeedback(QPushButton* button, QSoundEffect* clickSound) {
     });
 }
 
-void animateEntrance(QWidget* widget, QObject* owner, int delayMs) {
-    if (!widget) return;
-    QTimer::singleShot(delayMs, widget, [widget, owner] {
-        // Do not replace an effect already owned by another visual treatment.
-        if (!widget || widget->graphicsEffect()) return;
-        auto* effect = new QGraphicsOpacityEffect(widget);
-        effect->setOpacity(0.0);
-        widget->setGraphicsEffect(effect);
-        auto* animation = new QPropertyAnimation(effect, "opacity", owner);
-        animation->setDuration(280);
-        animation->setStartValue(0.0);
-        animation->setEndValue(1.0);
-        animation->setEasingCurve(QEasingCurve::OutCubic);
-        QObject::connect(animation, &QPropertyAnimation::finished, widget,
-                         [widget, effect] {
-            if (widget && widget->graphicsEffect() == effect)
-                widget->setGraphicsEffect(nullptr);
-        });
-        animation->start(QAbstractAnimation::DeleteWhenStopped);
-    });
-}
-
-void animateCardEntrance(QFrame* card, QObject* owner, int firstDelay = 35,
-                          int stepDelay = 38) {
-    if (!card) return;
-    const auto children = card->findChildren<QWidget*>(QString(), Qt::FindDirectChildrenOnly);
-    int delay = firstDelay;
-    for (QWidget* child : children) {
-        animateEntrance(child, owner, delay);
-        delay += stepDelay;
-    }
-}
-
-void animateHomeEntrance(QWidget* homePage, QObject* owner) {
-    if (!homePage) return;
-    animateCardEntrance(homePage->findChild<QFrame*>(QStringLiteral("homeCard")), owner);
-    if (auto* footer = homePage->findChild<QLabel*>(QStringLiteral("homeFooter")))
-        animateEntrance(footer, owner, 180);
-}
-
 class CheckersBackdrop final : public QWidget {
 public:
     explicit CheckersBackdrop(QWidget* parent = nullptr) : QWidget(parent) {
         setObjectName("homeBackground");
         setAttribute(Qt::WA_OpaquePaintEvent);
-        timer_.setInterval(33);
-        QObject::connect(&timer_, &QTimer::timeout, this, [this] {
-            phase_ += 0.006;
-            if (phase_ > 1000.0) phase_ = 0.0;
-            update();
-        });
     }
 
 protected:
-    void showEvent(QShowEvent* event) override { QWidget::showEvent(event); timer_.start(); }
-    void hideEvent(QHideEvent* event) override { timer_.stop(); QWidget::hideEvent(event); }
     void paintEvent(QPaintEvent*) override {
         QPainter p(this);
         p.setRenderHint(QPainter::Antialiasing);
@@ -266,11 +218,11 @@ protected:
         }
         p.restore();
 
+        static constexpr qreal xFactors[] = {0.08, 0.22, 0.36, 0.50, 0.64, 0.78, 0.92};
+        static constexpr qreal yFactors[] = {0.18, 0.285, 0.39, 0.495, 0.60, 0.705, 0.81};
         for (int i = 0; i < 7; ++i) {
-            const qreal x = width() * (0.08 + 0.14 * i)
-                          + qSin(phase_ + i * 1.7) * 17.0;
-            const qreal y = height() * (0.18 + 0.105 * (i % 5))
-                          + qCos(phase_ * 0.8 + i * 1.3) * 23.0;
+            const qreal x = width() * xFactors[i];
+            const qreal y = height() * yFactors[i];
             const qreal radius = 13.0 + (i % 3) * 3.0;
             QColor pieceColor(dark ? "#d6b38c" : "#80583b");
             pieceColor.setAlpha(dark ? 27 : 32);
@@ -293,9 +245,6 @@ protected:
         }
     }
 
-private:
-    QTimer timer_;
-    qreal phase_{0.0};
 };
 
 class WinRateRing final : public QWidget {
@@ -510,7 +459,7 @@ MainWindow::MainWindow(Database& database, qint64 userId, QString username, QWid
     gameDrawerScroll_ = drawerScroll;
     root->addWidget(drawerScroll);
     drawerAnimation_ = new QPropertyAnimation(drawerScroll, "maximumWidth", this);
-    drawerAnimation_->setDuration(310);
+    drawerAnimation_->setDuration(230);
     drawerAnimation_->setEasingCurve(QEasingCurve::OutCubic);
     connect(drawerToggle_, &QPushButton::clicked, this, [this] { toggleGameDrawer(); });
     gamePage_ = central;
@@ -605,7 +554,7 @@ MainWindow::MainWindow(Database& database, qint64 userId, QString username, QWid
             : QStringLiteral("Вы вошли как  ·  %1").arg(username_));
         if (homeLogin_) homeLogin_->setVisible(userId_ < 0);
         navigateToPage(homePage_);
-        animateHomeEntrance(homePage_, this);
+
         statusBar()->showMessage(QStringLiteral("Добро пожаловать, %1").arg(username_), 3000);
     });
     setCentralWidget(pages_);
@@ -668,7 +617,6 @@ MainWindow::MainWindow(Database& database, qint64 userId, QString username, QWid
     const auto buttons = findChildren<QPushButton*>();
     for (QPushButton* button : buttons) addButtonFeedback(button, buttonSound_);
     applyTheme(darkTheme_);
-    if (userId_ >= 0) animateHomeEntrance(homePage_, this);
 
     connect(boardView_, &BoardWidget::animationFinished, this, [this] {
         if (aiThinking_ || gameOver()) return;
@@ -868,12 +816,15 @@ void MainWindow::navigateToPage(QWidget* page) {
         transitionEffect_ = nullptr;
     }
     if (pages_->currentWidget() == page) return;
+
+    pages_->setCurrentWidget(page);
+    if (!animationsEnabled_) return;
+
     auto* effect = new QGraphicsOpacityEffect(page);
     effect->setOpacity(0.0);
     page->setGraphicsEffect(effect);
-    pages_->setCurrentWidget(page);
     auto* animation = new QPropertyAnimation(effect, "opacity", this);
-    animation->setDuration(220);
+    animation->setDuration(155);
     animation->setStartValue(0.0);
     animation->setEndValue(1.0);
     animation->setEasingCurve(QEasingCurve::OutCubic);
@@ -910,7 +861,7 @@ void MainWindow::toggleGameDrawer(bool open) {
     drawerAnimation_->setStartValue(gameDrawerScroll_->maximumWidth());
     drawerAnimation_->setEndValue(drawerOpen_ ? 326 : 0);
     drawerAnimation_->start();
-    if (drawerOpen_) animateEntrance(gameDrawerScroll_, this, 0);
+
 }
 void MainWindow::toggleGameDrawer() {
     toggleGameDrawer(!drawerOpen_);
@@ -1153,14 +1104,14 @@ void MainWindow::openSettings() {
     animationSetting_->setChecked(animationsEnabled_);
     animationSpeedSetting_->setValue(animationSpeedPercent_);
     navigateToPage(settingsPage_);
-    animateCardEntrance(settingsPage_->findChild<QFrame*>(QStringLiteral("sidePanel")), this, 30, 34);
+
 }
 void MainWindow::showHome() {
     if (aiThinking_) return;
     if (homeStart_) homeStart_->setText(!historyMoves_.empty() && gameResult_ == QStringLiteral("in_progress")
         ? QStringLiteral("Продолжить игру") : QStringLiteral("Начать игру"));
     navigateToPage(homePage_);
-    animateHomeEntrance(homePage_, this);
+
 }
 
 void MainWindow::showInlineMessage(const QString& title, const QString& message) {
@@ -1234,7 +1185,6 @@ void MainWindow::showInlinePrompt(const QString& title, const QString& message,
     outer->addStretch(1);
     pages_->addWidget(messagePage_);
     navigateToPage(messagePage_);
-    animateCardEntrance(card, this, 30, 32);
 
     auto finish = [this, callback](bool accepted) {
         QWidget* returnPage = messageReturnPage_ ? messageReturnPage_ : homePage_;
@@ -1514,7 +1464,7 @@ void MainWindow::showStatistics() {
 
     pages_->addWidget(page);
     navigateToPage(page);
-    animateCardEntrance(card, this, 30, 30);
+
     connect(back, &QPushButton::clicked, this, [this, page] {
         navigateToPage(homePage_);
         pages_->removeWidget(page);
