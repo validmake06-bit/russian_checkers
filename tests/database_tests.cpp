@@ -71,7 +71,7 @@ int main(int argc, char* argv[]) {
         CHECK(recentGames.size() == 51);
         CHECK(recentGames.front().id == gameId);
         CHECK(recentGames.front().isFavorite);
-        CHECK(recentGames.back().id == newestGameId);
+        CHECK(recentGames.at(1).id == newestGameId);
         QStringList recentMoves;
         CHECK(database.getGameMoves(userId, newestGameId, &recentMoves, &error));
         CHECK(recentMoves.size() == 1);
