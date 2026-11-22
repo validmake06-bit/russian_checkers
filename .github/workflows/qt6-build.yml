@@ -1,0 +1,23 @@
+name: Build and test
+
+on:
+  push:
+    branches: [ main, "feature/**" ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  linux-qt6:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Qt 6
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build g++ qt6-base-dev qt6-multimedia-dev libqt6sql6-sqlite
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
+      - name: Build application and tests
+        run: cmake --build build --parallel 2
+      - name: Run core tests
+        run: ctest --test-dir build --output-on-failure
