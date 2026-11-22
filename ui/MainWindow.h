@@ -42,6 +42,7 @@ private slots:
     void exportProtocol();
     void showHome();
     void showStatistics();
+    void showReplay(qint64 gameId, const QString& gameTitle, QWidget* returnPage);
     void toggleGameDrawer();
     void toggleGameDrawer(bool open);
 private:
