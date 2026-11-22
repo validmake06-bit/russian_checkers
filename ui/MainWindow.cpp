@@ -1201,6 +1201,15 @@ void MainWindow::openSettings() {
         scroll->setWidgetResizable(true);
         scroll->setFrameShape(QFrame::NoFrame);
         scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        scroll->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+        scroll->setStyleSheet(QStringLiteral(
+            "QScrollArea#settingsScroll { background: transparent; border: 0; }"
+            "QScrollArea#settingsScroll QWidget#qt_scrollarea_viewport { background: transparent; }"
+            "QScrollArea#settingsScroll QScrollBar:vertical { width: 6px; background: transparent; margin: 4px 0; }"
+            "QScrollArea#settingsScroll QScrollBar::handle:vertical { background: rgba(150, 125, 100, 90); border-radius: 3px; min-height: 24px; }"
+            "QScrollArea#settingsScroll QScrollBar::add-line:vertical, QScrollArea#settingsScroll QScrollBar::sub-line:vertical { height: 0; }"));
+        scroll->viewport()->setAutoFillBackground(false);
+        scroll->setAttribute(Qt::WA_TranslucentBackground);
         scroll->setWidget(card);
         outer->addWidget(scroll, 1);
         pages_->addWidget(settingsPage_);
