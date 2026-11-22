@@ -1,0 +1,29 @@
+{
+	"BUILD_DIR" : "C:/Projects/russian_checkers/build/Desktop_Qt_6_12_0_MinGW_64_bit_Debug/russian_checkers_autogen",
+	"CMAKE_BINARY_DIR" : "C:/Projects/russian_checkers/build/Desktop_Qt_6_12_0_MinGW_64_bit_Debug",
+	"CMAKE_CURRENT_BINARY_DIR" : "C:/Projects/russian_checkers/build/Desktop_Qt_6_12_0_MinGW_64_bit_Debug",
+	"CMAKE_CURRENT_SOURCE_DIR" : "C:/Projects/russian_checkers",
+	"CMAKE_SOURCE_DIR" : "C:/Projects/russian_checkers",
+	"CROSS_CONFIG" : false,
+	"GENERATOR" : "MinGW Makefiles",
+	"INCLUDE_DIR" : "C:/Projects/russian_checkers/build/Desktop_Qt_6_12_0_MinGW_64_bit_Debug/russian_checkers_autogen/include",
+	"INPUTS" : 
+	[
+		"C:/Projects/russian_checkers/resources/sounds/defeat.wav",
+		"C:/Projects/russian_checkers/resources/sounds/capture.wav",
+		"C:/Projects/russian_checkers/resources/sounds/ambient.wav",
+		"C:/Projects/russian_checkers/resources/sounds/move.wav",
+		"C:/Projects/russian_checkers/resources/sounds/victory.wav"
+	],
+	"LOCK_FILE" : "C:/Projects/russian_checkers/build/Desktop_Qt_6_12_0_MinGW_64_bit_Debug/CMakeFiles/russian_checkers_autogen.dir/AutoRcc_resources_EWIEGA46WW_Lock.lock",
+	"MULTI_CONFIG" : false,
+	"OPTIONS" : [ "--no-zstd", "-name", "resources" ],
+	"OUTPUT_CHECKSUM" : "EWIEGA46WW",
+	"OUTPUT_NAME" : "qrc_resources.cpp",
+	"RCC_EXECUTABLE" : "C:/Qt/6.12.0/mingw_64/bin/rcc.exe",
+	"RCC_LIST_OPTIONS" : [ "--list" ],
+	"SETTINGS_FILE" : "C:/Projects/russian_checkers/build/Desktop_Qt_6_12_0_MinGW_64_bit_Debug/CMakeFiles/russian_checkers_autogen.dir/AutoRcc_resources_EWIEGA46WW_Used.txt",
+	"SOURCE" : "C:/Projects/russian_checkers/resources.qrc",
+	"USE_BETTER_GRAPH" : true,
+	"VERBOSITY" : 0
+}

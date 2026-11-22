@@ -1,0 +1,2 @@
+C:\Qt\Tools\mingw1310_64\bin\ar.exe qc libcheckers_core.a CMakeFiles/checkers_core.dir/checkers_core_autogen/mocs_compilation.cpp.obj CMakeFiles/checkers_core.dir/core/Board.cpp.obj CMakeFiles/checkers_core.dir/core/AI.cpp.obj
+C:\Qt\Tools\mingw1310_64\bin\ranlib.exe libcheckers_core.a

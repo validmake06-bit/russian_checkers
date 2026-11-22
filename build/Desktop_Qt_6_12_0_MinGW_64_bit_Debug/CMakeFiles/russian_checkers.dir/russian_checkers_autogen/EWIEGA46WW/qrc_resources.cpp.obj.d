@@ -1,0 +1,2 @@
+CMakeFiles/russian_checkers.dir/russian_checkers_autogen/EWIEGA46WW/qrc_resources.cpp.obj: \
+ C:\Projects\russian_checkers\build\Desktop_Qt_6_12_0_MinGW_64_bit_Debug\russian_checkers_autogen\EWIEGA46WW\qrc_resources.cpp
