@@ -77,9 +77,6 @@ private:
     QWidget* messageReturnPage_{};
     QWidget* pageBeforeSettings_{};
     QWidget* statisticsPage_{};
-    QPropertyAnimation* pageTransition_{};
-    QWidget* transitionTarget_{};
-    QGraphicsOpacityEffect* transitionEffect_{};
     QComboBox* themeSetting_{};
     QCheckBox* soundSetting_{};
     QSlider* soundVolumeSetting_{};
