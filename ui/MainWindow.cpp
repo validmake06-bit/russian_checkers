@@ -1282,7 +1282,7 @@ void MainWindow::showStatistics() {
     eyebrow->setObjectName("brand");
     auto* heading = new QLabel(QStringLiteral("Статистика игрока"), card);
     heading->setObjectName("title");
-    auto* identity = new QLabel(QStringLiteral("%1  ·  Личная игровая история").arg(username_), card);
+    auto* identity = new QLabel(QStringLiteral("%1  ·  статистика последних 50 партий").arg(username_), card);
     identity->setObjectName("muted");
     layout->addWidget(eyebrow);
     layout->addWidget(heading);
@@ -1320,7 +1320,7 @@ void MainWindow::showStatistics() {
     const qint64 completed = data.wins + data.losses + data.draws;
     grid->addWidget(metric(QStringLiteral("Процент побед"), QStringLiteral("%1%").arg(data.winRatePercent),
                            QStringLiteral("От завершённых партий")), 0, 0);
-    grid->addWidget(metric(QStringLiteral("Всего партий"), QString::number(data.totalGames),
+    grid->addWidget(metric(QStringLiteral("Партии в истории"), QString::number(data.totalGames),
                            QStringLiteral("%1 завершено · %2 прервано").arg(completed).arg(data.abandoned)), 0, 1);
     grid->addWidget(metric(QStringLiteral("Победы"), QString::number(data.wins),
                            QStringLiteral("%1 поражений · %2 ничьих").arg(data.losses).arg(data.draws)), 0, 2);
