@@ -409,6 +409,21 @@ bool Database::setGameFavorite(qint64 userId, qint64 gameId, bool favorite, QStr
         if (error) *error = QStringLiteral("Партия не найдена.");
         return false;
     }
+    if (!favorite) {
+        // Once a game leaves favorites, immediately restore the 50-record
+        // rolling limit and let the foreign-key cascade remove old move rows.
+        QSqlQuery prune(db_);
+        prune.prepare(QStringLiteral(
+            "DELETE FROM games WHERE user_id=? AND finished_at IS NOT NULL AND is_favorite=0 "
+            "AND id IN (SELECT id FROM games WHERE user_id=? AND finished_at IS NOT NULL "
+            "AND is_favorite=0 ORDER BY finished_at DESC, id DESC LIMIT -1 OFFSET 50)"));
+        prune.addBindValue(userId);
+        prune.addBindValue(userId);
+        if (!prune.exec()) {
+            if (error) *error = prune.lastError().text();
+            return false;
+        }
+    }
     return true;
 }
 
