@@ -628,12 +628,14 @@ void MainWindow::showInlineMessage(const QString& title, const QString& message)
 void MainWindow::showInlinePrompt(const QString& title, const QString& message,
                                   const QString& acceptText, const QString& cancelText,
                                   std::function<void(bool)> callback) {
+    QWidget* returnPage = (messagePage_ && messageReturnPage_)
+        ? messageReturnPage_ : pages_->currentWidget();
     if (messagePage_) {
         pages_->removeWidget(messagePage_);
         messagePage_->deleteLater();
         messagePage_ = nullptr;
     }
-    messageReturnPage_ = pages_->currentWidget();
+    messageReturnPage_ = returnPage;
     messagePage_ = new QWidget(pages_);
     messagePage_->setObjectName("appBackground");
     auto* outer = new QVBoxLayout(messagePage_);
