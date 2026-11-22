@@ -9,7 +9,7 @@ using namespace checkers;
 BoardWidget::BoardWidget(QWidget* parent) : QWidget(parent) {
     setMinimumSize(420, 420);
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    animation_.setDuration(300);
+    animation_.setDuration(240);
     animation_.setEasingCurve(QEasingCurve::InOutCubic);
     connect(&animation_, &QVariantAnimation::valueChanged, this, [this](const QVariant& v) {
         setAnimatedPosition(v.toPointF());
@@ -21,7 +21,7 @@ BoardWidget::BoardWidget(QWidget* parent) : QWidget(parent) {
         update();
         emit animationFinished();
     });
-    captureAnimation_.setDuration(260);
+    captureAnimation_.setDuration(210);
     captureAnimation_.setStartValue(1.0);
     captureAnimation_.setEndValue(0.0);
     captureAnimation_.setEasingCurve(QEasingCurve::OutCubic);
