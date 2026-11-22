@@ -21,6 +21,7 @@ class QMediaPlayer;
 class QAudioOutput;
 
 class Database;
+class AuthDialog;
 
 class MainWindow final : public QMainWindow {
     Q_OBJECT
@@ -53,6 +54,9 @@ private:
 
     QStackedWidget* pages_{};
     QWidget* homePage_{};
+    AuthDialog* authPage_{};
+    QLabel* userLabel_{};
+    QLabel* homeUserLabel_{};
     QWidget* gamePage_{};
     QWidget* settingsPage_{};
     QWidget* messagePage_{};
