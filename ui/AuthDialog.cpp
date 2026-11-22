@@ -233,11 +233,11 @@ void AuthDialog::registerAccount() {
     }
     userId_ = id;
     username_ = name;
-    accept();
+    emit authenticated(userId_, username_);
 }
 
 void AuthDialog::continueAsGuest() {
     userId_ = -1;
     username_ = QStringLiteral("Гость");
-    accept();
+    emit authenticated(userId_, username_);
 }
