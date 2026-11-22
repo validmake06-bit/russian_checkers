@@ -2,6 +2,9 @@
 #include "BoardWidget.h"
 #include "AI.h"
 #include <QMainWindow>
+#include <QPropertyAnimation>
+class QFrame;
+class QScrollArea;
 class QCheckBox;
 class QSlider;
 #include <QFutureWatcher>
@@ -37,6 +40,8 @@ private slots:
     void exportProtocol();
     void showHome();
     void showStatistics();
+    void toggleGameDrawer();
+    void toggleGameDrawer(bool open);
 private:
     void refresh();
     void applyTheme(bool dark);
@@ -58,6 +63,11 @@ private:
     QLabel* userLabel_{};
     QLabel* homeUserLabel_{};
     QWidget* gamePage_{};
+    QFrame* gameDrawer_{};
+    QScrollArea* gameDrawerScroll_{};
+    QPushButton* drawerToggle_{};
+    QPropertyAnimation* drawerAnimation_{};
+    bool drawerOpen_{false};
     QWidget* settingsPage_{};
     QWidget* messagePage_{};
     QWidget* messageReturnPage_{};
