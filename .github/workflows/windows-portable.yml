@@ -1,0 +1,58 @@
+name: Windows portable build
+
+on:
+  push:
+    branches: [feature/complete-ui-redesign]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Qt 6 (MinGW)
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.3'
+          host: windows
+          target: desktop
+          arch: win64_mingw
+          modules: qtmultimedia
+          # Qt 6.8.3 uses the MinGW 13.1.0 tool package.
+          tools: 'tools_mingw1310,qt.tools.win64_mingw1310'
+          cache: true
+
+      - name: Configure
+        shell: pwsh
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Assemble portable folder
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Copy-Item build/russian_checkers.exe dist/RussianCheckers.exe
+          windeployqt --release --compiler-runtime --dir dist dist/RussianCheckers.exe
+          New-Item -ItemType Directory -Force -Path dist/sqldrivers | Out-Null
+          $qtRoot = $env:QT_ROOT_DIR
+          $sqlitePlugin = Get-ChildItem -Path $qtRoot -Filter qsqlite.dll -Recurse | Select-Object -First 1
+          if (-not $sqlitePlugin) { throw "Qt SQLite driver qsqlite.dll was not found" }
+          Copy-Item $sqlitePlugin.FullName dist/sqldrivers/qsqlite.dll
+          @"
+          Запуск: дважды щёлкните по RussianCheckers.exe.
+          Все необходимые библиотеки Qt находятся рядом с приложением.
+          Не удаляйте папки platforms, styles, imageformats, multimedia и sqldrivers.
+          "@ | Set-Content dist/README.txt -Encoding UTF8
+
+      - name: Upload portable Windows package
+        uses: actions/upload-artifact@v4
+        with:
+          name: RussianCheckers-Windows-x64-Portable
+          path: dist/
+          if-no-files-found: error
+          retention-days: 30

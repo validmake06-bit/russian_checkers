@@ -1,9 +1,8 @@
-#include "AuthDialog.h"
 #include "MainWindow.h"
 #include "../db/Database.h"
 
 #include <QApplication>
-#include <QMessageBox>
+#include <QDebug>
 #include <QStandardPaths>
 #include <QDir>
 #include <QPropertyAnimation>
@@ -16,21 +15,18 @@ int main(int argc, char *argv[]) {
 
     const QString dataDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
     if (!QDir().mkpath(dataDir)) {
-        QMessageBox::critical(nullptr, QStringLiteral("Ошибка"), QStringLiteral("Не удалось создать папку данных приложения."));
+        qCritical() << "Не удалось создать папку данных приложения.";
         return 1;
     }
 
     Database database;
     QString error;
     if (!database.open(dataDir + QStringLiteral("/checkers.sqlite"), &error)) {
-        QMessageBox::critical(nullptr, QStringLiteral("Ошибка SQLite"), error);
+        qCritical() << "Ошибка SQLite:" << error;
         return 1;
     }
 
-    AuthDialog auth(database);
-    if (auth.exec() != QDialog::Accepted) return 0;
-
-    MainWindow window(database, auth.userId(), auth.username());
+    MainWindow window(database, -1, QString());
     window.setWindowOpacity(0.0);
     window.show();
     auto* intro = new QPropertyAnimation(&window, "windowOpacity", &window);

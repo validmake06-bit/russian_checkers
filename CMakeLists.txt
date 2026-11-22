@@ -60,6 +60,20 @@ if(BUILD_TESTING)
         target_compile_options(checkers_tests PRIVATE -Wall -Wextra -Wpedantic)
     endif()
     add_test(NAME checkers_tests COMMAND checkers_tests)
+
+    add_executable(checkers_database_tests
+        tests/database_tests.cpp
+        db/Database.cpp
+        db/Database.h
+    )
+    target_include_directories(checkers_database_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/db)
+    target_link_libraries(checkers_database_tests PRIVATE Qt6::Core Qt6::Sql)
+    if(MSVC)
+        target_compile_options(checkers_database_tests PRIVATE /W4 /permissive-)
+    else()
+        target_compile_options(checkers_database_tests PRIVATE -Wall -Wextra -Wpedantic)
+    endif()
+    add_test(NAME checkers_database_tests COMMAND checkers_database_tests)
 endif()
 
 message(STATUS "Russian Checkers: Qt 6 desktop application is REQUIRED")

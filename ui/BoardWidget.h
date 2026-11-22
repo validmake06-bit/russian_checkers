@@ -3,6 +3,7 @@
 #include <QWidget>
 #include <QPointF>
 #include <QVariantAnimation>
+#include <QPixmap>
 #include <vector>
 #include <array>
 
@@ -20,6 +21,7 @@ public:
     void setSelection(checkers::Square square);
     void animateMove(const checkers::Move& move, const checkers::Board& resultingBoard);
     void setDarkTheme(bool dark);
+    void setAnimationSettings(bool enabled, int speedPercent);
 
     QPointF animatedPosition() const { return animatedPosition_; }
     void setAnimatedPosition(const QPointF& p);
@@ -37,6 +39,9 @@ private:
     QPointF squareCenter(int square) const;
     int squareAt(const QPointF& point) const;
     void drawPiece(QPainter& painter, const QPointF& center, bool white, bool king, qreal radius) const;
+    void startAnimationSegment();
+    void advanceAnimationSequence();
+    void finishAnimationSequence();
 
     checkers::Board board_;
     checkers::Side sideToMove_{checkers::Side::White};
@@ -48,12 +53,26 @@ private:
     bool interactionEnabled_{true};
     bool darkTheme_{true};
     bool animating_{false};
+    bool animationsEnabled_{true};
+    int animationSpeedPercent_{100};
     checkers::Square animatedSquare_{-1};
     QPointF animatedPosition_;
     QVariantAnimation animation_;
     QVariantAnimation captureAnimation_;
+    QVariantAnimation landingAnimation_;
+    qreal landingScale_{1.0};
+    bool landingPulseRunning_{false};
+    checkers::Piece finalPiece_{checkers::Piece::Empty};
     std::array<checkers::Square, checkers::MaxCaptures> fadingSquares_{};
     std::array<checkers::Piece, checkers::MaxCaptures> fadingPieces_{};
     int fadingCount_{0};
     qreal captureOpacity_{0.0};
+    checkers::Move animatedMove_{};
+    checkers::Piece movingPiece_{checkers::Piece::Empty};
+    std::array<checkers::Piece, checkers::MaxCaptures> capturedPieces_{};
+    int animationSegment_{0};
+    QPixmap backgroundCache_;
+    QSize cachedSurfaceSize_;
+    qreal cachedSurfaceDpr_{0.0};
+    bool cachedDarkTheme_{false};
 };
