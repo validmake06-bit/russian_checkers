@@ -260,7 +260,7 @@ bool Database::getUserStatistics(qint64 userId, UserStatistics* statistics, QStr
         "COALESCE(SUM(CASE WHEN finished_at IS NULL "
         "THEN MAX(0, CAST((julianday('now') - julianday(started_at)) * 86400 AS INTEGER)) "
         "ELSE MAX(0, CAST((julianday(finished_at) - julianday(started_at)) * 86400 AS INTEGER)) END), 0), "
-        "COALESCE(SUM(CASE WHEN finished_at IS NOT NULL "
+        "COALESCE(SUM(CASE WHEN finished_at IS NOT NULL AND result IN ('win','loss','draw') "
         "THEN MAX(0, CAST((julianday(finished_at) - julianday(started_at)) * 86400 AS INTEGER)) "
         "ELSE 0 END), 0), "
         "(SELECT COUNT(*) FROM moves m INNER JOIN games g ON g.id=m.game_id WHERE g.user_id=?) "
