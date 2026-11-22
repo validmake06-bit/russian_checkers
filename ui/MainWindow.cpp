@@ -34,6 +34,9 @@
 #include <QStackedWidget>
 #include <QMediaPlayer>
 #include <QAudioOutput>
+#include <QPainter>
+#include <QTimer>
+#include <QProgressBar>
 #include <algorithm>
 #include <cmath>
 
@@ -154,6 +157,76 @@ void addButtonFeedback(QPushButton* button, QSoundEffect* clickSound) {
         if (clickSound) clickSound->play();
     });
 }
+
+class CheckersBackdrop final : public QWidget {
+public:
+    explicit CheckersBackdrop(QWidget* parent = nullptr) : QWidget(parent) {
+        setObjectName("homeBackground");
+        setAttribute(Qt::WA_OpaquePaintEvent);
+        auto* timer = new QTimer(this);
+        timer->setInterval(33);
+        QObject::connect(timer, &QTimer::timeout, this, [this] {
+            phase_ += 0.006;
+            if (phase_ > 1000.0) phase_ = 0.0;
+            update();
+        });
+        timer->start();
+    }
+
+protected:
+    void paintEvent(QPaintEvent*) override {
+        QPainter p(this);
+        p.setRenderHint(QPainter::Antialiasing);
+        const bool dark = property("darkTheme").toBool();
+        QLinearGradient base(0, 0, width(), height());
+        if (dark) {
+            base.setColorAt(0.0, QColor("#111820"));
+            base.setColorAt(0.55, QColor("#202a2b"));
+            base.setColorAt(1.0, QColor("#34251d"));
+        } else {
+            base.setColorAt(0.0, QColor("#f5eee3"));
+            base.setColorAt(0.55, QColor("#eee0cc"));
+            base.setColorAt(1.0, QColor("#e4d0b7"));
+        }
+        p.fillRect(rect(), base);
+
+        // A quiet, oversized board motif gives the menu depth without competing
+        // with the controls or creating a high-frequency visual distraction.
+        const qreal boardSide = qMin(width(), height()) * 0.88;
+        const QPointF boardCenter(width() * 0.78, height() * 0.48);
+        const qreal cell = boardSide / 8.0;
+        p.save();
+        p.translate(boardCenter);
+        p.rotate(-17.0);
+        p.setPen(Qt::NoPen);
+        for (int row = 0; row < 8; ++row) {
+            for (int col = 0; col < 8; ++col) {
+                if (((row + col) & 1) == 0) continue;
+                const int alpha = dark ? 12 : 19;
+                p.setBrush(QColor(dark ? "#d6b38c" : "#80583b", alpha));
+                p.drawRect(QRectF(-boardSide / 2 + col * cell,
+                                  -boardSide / 2 + row * cell, cell, cell));
+            }
+        }
+        p.restore();
+
+        for (int i = 0; i < 7; ++i) {
+            const qreal x = width() * (0.08 + 0.14 * i)
+                          + qSin(phase_ + i * 1.7) * 17.0;
+            const qreal y = height() * (0.18 + 0.105 * (i % 5))
+                          + qCos(phase_ * 0.8 + i * 1.3) * 23.0;
+            const qreal radius = 13.0 + (i % 3) * 3.0;
+            p.setPen(QPen(QColor(dark ? 224 : 117, dark ? 195 : 84,
+                                 dark ? 157 : 54, dark ? 27 : 30), 1.2));
+            p.setBrush(QColor(dark ? "#d6b38c" : "#80583b", dark ? 13 : 15));
+            p.drawEllipse(QPointF(x, y), radius, radius);
+            p.drawEllipse(QPointF(x, y), radius * 0.68, radius * 0.68);
+        }
+    }
+
+private:
+    qreal phase_{0.0};
+};
 } // namespace
 
 MainWindow::MainWindow(Database& database, qint64 userId, QString username, QWidget* parent)
@@ -310,8 +383,7 @@ MainWindow::MainWindow(Database& database, qint64 userId, QString username, QWid
     gamePage_ = central;
 
     // A calmer, more deliberate start screen with a warm visual focal point.
-    homePage_ = new QWidget(this);
-    homePage_->setObjectName("homeBackground");
+    homePage_ = new CheckersBackdrop(this);
     auto* homeLayout = new QVBoxLayout(homePage_);
     homeLayout->setContentsMargins(34, 24, 34, 24);
     homeLayout->addStretch(1);
@@ -994,10 +1066,119 @@ void MainWindow::showStatistics() {
             QStringLiteral("В гостевом режиме статистика не сохраняется. Войдите в аккаунт, чтобы вести историю партий."));
         return;
     }
+
+    UserStatistics data;
     QString error;
-    const QString report = database_.userStatistics(userId_, &error);
-    showInlineMessage(QStringLiteral("Моя статистика · %1").arg(username_),
-        error.isEmpty() ? report : error);
+    if (!database_.getUserStatistics(userId_, &data, &error)) {
+        showInlineMessage(QStringLiteral("Не удалось загрузить статистику"), error);
+        return;
+    }
+
+    auto* page = new QWidget(pages_);
+    page->setObjectName("appBackground");
+    auto* outer = new QVBoxLayout(page);
+    outer->setContentsMargins(34, 28, 34, 28);
+    outer->addStretch(1);
+
+    auto* card = new QFrame(page);
+    card->setObjectName("sidePanel");
+    card->setMaximumWidth(900);
+    auto* layout = new QVBoxLayout(card);
+    layout->setContentsMargins(34, 30, 34, 30);
+    layout->setSpacing(18);
+
+    auto* eyebrow = new QLabel(QStringLiteral("RUSSIAN CHECKERS  /  ВАШ ПРОГРЕСС"), card);
+    eyebrow->setObjectName("brand");
+    auto* heading = new QLabel(QStringLiteral("Статистика игрока"), card);
+    heading->setObjectName("title");
+    auto* identity = new QLabel(QStringLiteral("%1  ·  Личная игровая история").arg(username_), card);
+    identity->setObjectName("muted");
+    layout->addWidget(eyebrow);
+    layout->addWidget(heading);
+    layout->addWidget(identity);
+
+    const QString cardStyle = darkTheme_
+        ? QStringLiteral("QFrame { background:#202a2b; border:1px solid #394746; border-radius:16px; }")
+        : QStringLiteral("QFrame { background:#f7eee2; border:1px solid #e2d1bb; border-radius:16px; }");
+    const QString valueColor = darkTheme_ ? QStringLiteral("#f0dfca") : QStringLiteral("#493323");
+    const QString labelColor = darkTheme_ ? QStringLiteral("#a8b6ad") : QStringLiteral("#7c6955");
+    auto metric = [&](const QString& caption, const QString& value, const QString& detail = QString()) {
+        auto* tile = new QFrame(card);
+        tile->setStyleSheet(cardStyle);
+        auto* tileLayout = new QVBoxLayout(tile);
+        tileLayout->setContentsMargins(17, 14, 17, 14);
+        tileLayout->setSpacing(5);
+        auto* valueLabel = new QLabel(value, tile);
+        valueLabel->setStyleSheet(QStringLiteral("color:%1; font-size:25px; font-weight:700; background:transparent; border:0;").arg(valueColor));
+        auto* captionLabel = new QLabel(caption.toUpper(), tile);
+        captionLabel->setStyleSheet(QStringLiteral("color:%1; font-size:10px; font-weight:700; letter-spacing:1px; background:transparent; border:0;").arg(labelColor));
+        tileLayout->addWidget(valueLabel);
+        tileLayout->addWidget(captionLabel);
+        if (!detail.isEmpty()) {
+            auto* detailLabel = new QLabel(detail, tile);
+            detailLabel->setWordWrap(true);
+            detailLabel->setStyleSheet(QStringLiteral("color:%1; font-size:11px; background:transparent; border:0;").arg(labelColor));
+            tileLayout->addWidget(detailLabel);
+        }
+        return tile;
+    };
+
+    auto* grid = new QGridLayout;
+    grid->setHorizontalSpacing(12);
+    grid->setVerticalSpacing(12);
+    const qint64 completed = data.wins + data.losses + data.draws;
+    const qint64 hours = data.totalPlaySeconds / 3600;
+    const qint64 minutes = (data.totalPlaySeconds % 3600) / 60;
+    const qint64 avgMinutes = data.averageGameSeconds / 60;
+    const qint64 avgSeconds = data.averageGameSeconds % 60;
+    grid->addWidget(metric(QStringLiteral("Процент побед"), QStringLiteral("%1%").arg(data.winRatePercent),
+                           QStringLiteral("От завершённых партий")), 0, 0);
+    grid->addWidget(metric(QStringLiteral("Всего партий"), QString::number(data.totalGames),
+                           QStringLiteral("%1 завершено · %2 прервано").arg(completed).arg(data.abandoned)), 0, 1);
+    grid->addWidget(metric(QStringLiteral("Победы"), QString::number(data.wins),
+                           QStringLiteral("%1 поражений · %2 ничьих").arg(data.losses).arg(data.draws)), 0, 2);
+    grid->addWidget(metric(QStringLiteral("Время в игре"),
+                           QStringLiteral("%1 ч %2 мин").arg(hours).arg(minutes, 2, 10, QLatin1Char('0')),
+                           QStringLiteral("Суммарное игровое время")), 1, 0);
+    grid->addWidget(metric(QStringLiteral("Средняя партия"),
+                           QStringLiteral("%1 мин %2 сек").arg(avgMinutes).arg(avgSeconds, 2, 10, QLatin1Char('0')),
+                           QStringLiteral("По завершённым партиям")), 1, 1);
+    grid->addWidget(metric(QStringLiteral("Сделано ходов"), QString::number(data.totalMoves),
+                           QStringLiteral("За всю историю аккаунта")), 1, 2);
+    layout->addLayout(grid);
+
+    auto* rateLabel = new QLabel(QStringLiteral("Доля побед среди завершённых партий"), card);
+    rateLabel->setObjectName("muted");
+    auto* rate = new QProgressBar(card);
+    rate->setRange(0, 100);
+    rate->setValue(data.winRatePercent);
+    rate->setTextVisible(true);
+    rate->setFormat(QStringLiteral("%p%"));
+    rate->setFixedHeight(13);
+    rate->setStyleSheet(darkTheme_
+        ? QStringLiteral("QProgressBar { background:#303b3b; border:0; border-radius:6px; } QProgressBar::chunk { background:#c69a70; border-radius:6px; }")
+        : QStringLiteral("QProgressBar { background:#e6d8c5; border:0; border-radius:6px; } QProgressBar::chunk { background:#8b5a38; border-radius:6px; }"));
+    layout->addWidget(rateLabel);
+    layout->addWidget(rate);
+
+    auto* actions = new QHBoxLayout;
+    actions->addStretch(1);
+    auto* back = new QPushButton(QStringLiteral("Вернуться в меню"), card);
+    back->setObjectName("primary");
+    back->setMinimumHeight(44);
+    actions->addWidget(back);
+    layout->addLayout(actions);
+    outer->addWidget(card, 0, Qt::AlignHCenter);
+    outer->addStretch(1);
+
+    pages_->addWidget(page);
+    pages_->setCurrentWidget(page);
+    connect(back, &QPushButton::clicked, this, [this, page] {
+        pages_->setCurrentWidget(homePage_);
+        pages_->removeWidget(page);
+        page->deleteLater();
+    });
+    addButtonFeedback(back, buttonSound_);
 }
 
 void MainWindow::exportProtocol() {
