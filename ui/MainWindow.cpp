@@ -597,7 +597,7 @@ void MainWindow::applyTheme(bool dark) {
     QSettings().setValue(QStringLiteral("appearance/darkTheme"), darkTheme_);
     boardView_->setDarkTheme(darkTheme_);
     themeButton_->setText(darkTheme_ ? QStringLiteral("Светлая тема") : QStringLiteral("Тёмная тема"));
-    if (homePage_) { const auto labels = homePage_->findChildren<QPushButton*>(); for (auto* b : labels) if (b->text().contains(QStringLiteral("тема"))) b->setText(darkTheme_ ? QStringLiteral("Переключить на светлую тему") : QStringLiteral("Переключить на тёмную тему")); }
+    if (homePage_) { const auto labels = homePage_->findChildren<QPushButton*>(); for (auto* b : labels) if (b->text().contains(QStringLiteral("тема"))) b->setText(darkTheme_ ? QStringLiteral("Светлая тема") : QStringLiteral("Тёмная тема")); }
     soundButton_->setText(soundsEnabled_ ? QStringLiteral("Звук включён") : QStringLiteral("Звук выключен"));
 
     if (darkTheme_) {
@@ -709,6 +709,7 @@ void MainWindow::applySoundSettings(bool enabled, qreal volume) {
     for (QSoundEffect* effect : {moveSound_, captureSound_, victorySound_, defeatSound_}) {
         if (effect) effect->setVolume(soundVolume_);
     }
+    if (buttonSound_) buttonSound_->setVolume(soundVolume_ * 0.42);
     QSettings settings;
     settings.setValue(QStringLiteral("audio/enabled"), soundsEnabled_);
     settings.setValue(QStringLiteral("audio/volume"), soundVolume_);
