@@ -6,8 +6,13 @@
 #include <QSqlError>
 #include <QSqlQuery>
 #include <QTextStream>
+#include <atomic>
 
-Database::Database() : connectionName_(QStringLiteral("checkers_%1").arg(reinterpret_cast<quintptr>(this), 0, 16)) {}
+Database::Database() {
+    static std::atomic<quint64> nextConnectionId{1};
+    connectionName_ = QStringLiteral("checkers_%1").arg(
+        nextConnectionId.fetch_add(1, std::memory_order_relaxed));
+}
 
 Database::~Database() {
     const QString name = connectionName_;
