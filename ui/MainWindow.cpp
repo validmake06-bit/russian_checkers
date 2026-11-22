@@ -320,8 +320,8 @@ MainWindow::MainWindow(Database& database, qint64 userId, QString username, QWid
     resize(1240, 820);
     setMinimumSize(980, 680);
 
-    auto* central = new QWidget(this);
-    central->setObjectName("appBackground");
+    auto* central = new CheckersBackdrop(this);
+    central->setProperty("darkTheme", darkTheme_);
     auto* root = new QHBoxLayout(central);
     root->setContentsMargins(26, 24, 26, 24);
     root->setSpacing(24);
@@ -857,7 +857,9 @@ void MainWindow::toggleGameDrawer() {
 
 void MainWindow::applyTheme(bool dark) {
     darkTheme_ = dark;
-    if (homePage_) homePage_->setProperty("darkTheme", darkTheme_);
+    if (homePage_) { homePage_->setProperty("darkTheme", darkTheme_); homePage_->update(); }
+    if (gamePage_) { gamePage_->setProperty("darkTheme", darkTheme_); gamePage_->update(); }
+    if (settingsPage_) { settingsPage_->setProperty("darkTheme", darkTheme_); settingsPage_->update(); }
     QSettings().setValue(QStringLiteral("appearance/darkTheme"), darkTheme_);
     boardView_->setDarkTheme(darkTheme_);
     themeButton_->setText(darkTheme_ ? QStringLiteral("Светлая тема") : QStringLiteral("Тёмная тема"));
@@ -999,73 +1001,157 @@ void MainWindow::playMoveSound(bool capture) {
 void MainWindow::openSettings() {
     pageBeforeSettings_ = pages_->currentWidget();
     if (!settingsPage_) {
-        settingsPage_ = new QWidget(pages_);
-        settingsPage_->setObjectName("appBackground");
+        settingsPage_ = new CheckersBackdrop(pages_);
+        settingsPage_->setProperty("darkTheme", darkTheme_);
         auto* outer = new QVBoxLayout(settingsPage_);
-        outer->setContentsMargins(64, 42, 64, 42);
+        outer->setContentsMargins(28, 22, 28, 22);
         outer->addStretch(1);
 
         auto* card = new QFrame(settingsPage_);
-        card->setObjectName("sidePanel");
-        card->setMaximumWidth(620);
+        card->setObjectName("settingsCard");
+        card->setMaximumWidth(760);
         auto* cardLayout = new QVBoxLayout(card);
-        cardLayout->setContentsMargins(34, 30, 34, 30);
-        cardLayout->setSpacing(18);
+        cardLayout->setContentsMargins(30, 26, 30, 26);
+        cardLayout->setSpacing(16);
 
-        auto* eyebrow = new QLabel(QStringLiteral("RUSSIAN CHECKERS  /  ПАРАМЕТРЫ"), card);
+        auto* header = new QHBoxLayout;
+        auto* intro = new QVBoxLayout;
+        intro->setSpacing(5);
+        auto* eyebrow = new QLabel(QStringLiteral("RUSSIAN CHECKERS  /  ПЕРСОНАЛИЗАЦИЯ"), card);
         eyebrow->setObjectName("brand");
         auto* heading = new QLabel(QStringLiteral("Настройки"), card);
         heading->setObjectName("title");
-        auto* description = new QLabel(QStringLiteral("Настройте внешний вид и звуковое сопровождение игры."), card);
+        auto* description = new QLabel(QStringLiteral("Настройте атмосферу, звук и поведение анимаций."), card);
         description->setObjectName("muted");
-        auto* separator = new QFrame(card);
-        separator->setObjectName("separator");
-        separator->setFrameShape(QFrame::HLine);
+        description->setWordWrap(true);
+        intro->addWidget(eyebrow);
+        intro->addWidget(heading);
+        intro->addWidget(description);
+        header->addLayout(intro, 1);
+        cardLayout->addLayout(header);
 
-        auto* form = new QFormLayout;
-        form->setHorizontalSpacing(24);
-        form->setVerticalSpacing(16);
+        auto makeSection = [card, cardLayout](const QString& title, const QString& hint) {
+            auto* section = new QFrame(card);
+            section->setObjectName("settingsSection");
+            auto* layout = new QVBoxLayout(section);
+            layout->setContentsMargins(18, 15, 18, 15);
+            layout->setSpacing(12);
+            auto* sectionTitle = new QLabel(title, section);
+            sectionTitle->setObjectName("settingsSectionTitle");
+            auto* sectionHint = new QLabel(hint, section);
+            sectionHint->setObjectName("settingsSectionHint");
+            sectionHint->setWordWrap(true);
+            layout->addWidget(sectionTitle);
+            layout->addWidget(sectionHint);
+            cardLayout->addWidget(section);
+            return layout;
+        };
+        auto makeRow = [](QVBoxLayout* layout, const QString& title,
+                          const QString& hint, QWidget* control) {
+            auto* row = new QWidget;
+            auto* rowLayout = new QHBoxLayout(row);
+            rowLayout->setContentsMargins(0, 4, 0, 4);
+            rowLayout->setSpacing(18);
+            auto* labels = new QVBoxLayout;
+            labels->setSpacing(3);
+            auto* name = new QLabel(title, row);
+            name->setObjectName("settingsRowTitle");
+            auto* detail = new QLabel(hint, row);
+            detail->setObjectName("settingsRowHint");
+            detail->setWordWrap(true);
+            labels->addWidget(name);
+            labels->addWidget(detail);
+            rowLayout->addLayout(labels, 1);
+            control->setMinimumWidth(220);
+            rowLayout->addWidget(control, 0, Qt::AlignVCenter);
+            layout->addWidget(row);
+        };
+        auto makeSliderControl = [](QSlider* slider, QLabel* value) {
+            auto* wrapper = new QWidget;
+            auto* line = new QHBoxLayout(wrapper);
+            line->setContentsMargins(0, 0, 0, 0);
+            line->setSpacing(10);
+            slider->setMinimumWidth(150);
+            value->setObjectName("settingsValue");
+            value->setMinimumWidth(48);
+            value->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+            line->addWidget(slider, 1);
+            line->addWidget(value);
+            return wrapper;
+        };
+
+        auto* appearance = makeSection(QStringLiteral("ВНЕШНИЙ ВИД"),
+            QStringLiteral("Выберите оформление, которое будет использоваться во всех разделах игры."));
         themeSetting_ = new QComboBox(card);
         themeSetting_->setObjectName("settingsTheme");
         themeSetting_->addItem(QStringLiteral("Светлая тема"), false);
         themeSetting_->addItem(QStringLiteral("Тёмная тема"), true);
-        soundSetting_ = new QCheckBox(QStringLiteral("Звуки ходов и взятий"), card);
+        makeRow(appearance, QStringLiteral("Цветовая тема"),
+                QStringLiteral("Молочные оттенки или глубокая тёмная палитра."), themeSetting_);
+
+        auto* audio = makeSection(QStringLiteral("ЗВУК И МУЗЫКА"),
+            QStringLiteral("Отдельно регулируйте эффекты ходов и спокойное фоновое сопровождение."));
+        soundSetting_ = new QCheckBox(QStringLiteral("Включить звуки ходов и взятий"), card);
         soundSetting_->setObjectName("settingsSound");
+        makeRow(audio, QStringLiteral("Звуковые эффекты"),
+                QStringLiteral("Тихие звуки деревянных шашек и нажатий."), soundSetting_);
         soundVolumeSetting_ = new QSlider(Qt::Horizontal, card);
         soundVolumeSetting_->setRange(0, 100);
-        musicSetting_ = new QCheckBox(QStringLiteral("Фоновая музыка"), card);
+        auto* soundValue = new QLabel(card);
+        soundValue->setText(QStringLiteral("%1%").arg(qRound(soundVolume_ * 100)));
+        makeRow(audio, QStringLiteral("Громкость эффектов"),
+                QStringLiteral("Уровень громкости звуков интерфейса и ходов."),
+                makeSliderControl(soundVolumeSetting_, soundValue));
+        connect(soundVolumeSetting_, &QSlider::valueChanged, soundValue,
+                [soundValue](int value) { soundValue->setText(QStringLiteral("%1%").arg(value)); });
+
+        musicSetting_ = new QCheckBox(QStringLiteral("Включить фоновую музыку"), card);
         musicSetting_->setObjectName("settingsMusic");
+        makeRow(audio, QStringLiteral("Фоновая музыка"),
+                QStringLiteral("Ненавязчивое музыкальное сопровождение партии."), musicSetting_);
         musicVolumeSetting_ = new QSlider(Qt::Horizontal, card);
         musicVolumeSetting_->setRange(0, 30);
+        auto* musicValue = new QLabel(card);
+        musicValue->setText(QStringLiteral("%1%").arg(qRound(musicVolume_ * 100)));
+        makeRow(audio, QStringLiteral("Громкость музыки"),
+                QStringLiteral("Максимум ограничен, чтобы музыка не перекрывала игру."),
+                makeSliderControl(musicVolumeSetting_, musicValue));
+        connect(musicVolumeSetting_, &QSlider::valueChanged, musicValue,
+                [musicValue](int value) { musicValue->setText(QStringLiteral("%1%").arg(value)); });
+
+        auto* motion = makeSection(QStringLiteral("ДВИЖЕНИЕ И АНИМАЦИИ"),
+            QStringLiteral("Выберите комфортную скорость перемещения шашек и переходов."));
         animationSetting_ = new QCheckBox(QStringLiteral("Плавные анимации интерфейса и ходов"), card);
         animationSetting_->setObjectName("settingsAnimations");
+        makeRow(motion, QStringLiteral("Анимации"),
+                QStringLiteral("Можно отключить для максимально быстрого отклика."), animationSetting_);
         animationSpeedSetting_ = new QSlider(Qt::Horizontal, card);
         animationSpeedSetting_->setRange(50, 150);
+        animationSpeedSetting_->setTickPosition(QSlider::TicksBelow);
+        animationSpeedSetting_->setTickInterval(25);
         animationSpeedSetting_->setToolTip(QStringLiteral("50% — медленнее, 150% — быстрее"));
-        form->addRow(QStringLiteral("Оформление"), themeSetting_);
-        form->addRow(QStringLiteral("Звуковые эффекты"), soundSetting_);
-        form->addRow(QStringLiteral("Громкость эффектов"), soundVolumeSetting_);
-        form->addRow(QStringLiteral("Музыка"), musicSetting_);
-        form->addRow(QStringLiteral("Громкость музыки"), musicVolumeSetting_);
-        form->addRow(QStringLiteral("Анимация"), animationSetting_);
-        form->addRow(QStringLiteral("Скорость анимации"), animationSpeedSetting_);
+        auto* speedValue = new QLabel(card);
+        speedValue->setText(QStringLiteral("%1%").arg(animationSpeedPercent_));
+        makeRow(motion, QStringLiteral("Скорость анимации"),
+                QStringLiteral("50% — плавнее и медленнее · 150% — быстрее."),
+                makeSliderControl(animationSpeedSetting_, speedValue));
+        connect(animationSpeedSetting_, &QSlider::valueChanged, speedValue,
+                [speedValue](int value) { speedValue->setText(QStringLiteral("%1%").arg(value)); });
+        connect(animationSetting_, &QCheckBox::toggled, animationSpeedSetting_,
+                &QSlider::setEnabled);
 
         auto* actions = new QHBoxLayout;
         actions->addStretch(1);
         auto* back = new QPushButton(QStringLiteral("Назад"), card);
         back->setObjectName("secondary");
-        auto* save = new QPushButton(QStringLiteral("Сохранить настройки"), card);
+        auto* save = new QPushButton(QStringLiteral("Сохранить изменения"), card);
         save->setObjectName("primary");
+        save->setMinimumWidth(190);
         actions->addWidget(back);
         actions->addWidget(save);
-
-        cardLayout->addWidget(eyebrow);
-        cardLayout->addWidget(heading);
-        cardLayout->addWidget(description);
-        cardLayout->addWidget(separator);
-        cardLayout->addLayout(form);
-        cardLayout->addSpacing(8);
+        cardLayout->addSpacing(2);
         cardLayout->addLayout(actions);
+
         outer->addWidget(card, 0, Qt::AlignHCenter);
         outer->addStretch(1);
         pages_->addWidget(settingsPage_);
@@ -1094,6 +1180,7 @@ void MainWindow::openSettings() {
         });
     }
 
+    settingsPage_->setProperty("darkTheme", darkTheme_);
     themeSetting_->setCurrentIndex(darkTheme_ ? 1 : 0);
     soundSetting_->setChecked(soundsEnabled_);
     soundVolumeSetting_->setValue(qRound(soundVolume_ * 100.0));
@@ -1101,9 +1188,10 @@ void MainWindow::openSettings() {
     musicVolumeSetting_->setValue(qRound(musicVolume_ * 100.0));
     animationSetting_->setChecked(animationsEnabled_);
     animationSpeedSetting_->setValue(animationSpeedPercent_);
+    animationSpeedSetting_->setEnabled(animationsEnabled_);
     navigateToPage(settingsPage_);
-
 }
+
 void MainWindow::showHome() {
     if (aiThinking_) return;
     if (homeStart_) homeStart_->setText(!historyMoves_.empty() && gameResult_ == QStringLiteral("in_progress")
@@ -1205,8 +1293,8 @@ void MainWindow::showStatistics() {
         return;
     }
 
-    auto* page = new QWidget(pages_);
-    page->setObjectName("appBackground");
+    auto* page = new CheckersBackdrop(pages_);
+    page->setProperty("darkTheme", darkTheme_);
     auto* outer = new QVBoxLayout(page);
     outer->setContentsMargins(34, 28, 34, 28);
 
