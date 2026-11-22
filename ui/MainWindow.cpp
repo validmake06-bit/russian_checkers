@@ -45,8 +45,6 @@
 #include <QFontDatabase>
 #include <QApplication>
 #include <QGraphicsOpacityEffect>
-#include <QShowEvent>
-#include <QHideEvent>
 #include <algorithm>
 #include <cmath>
 
@@ -817,12 +815,15 @@ void MainWindow::navigateToPage(QWidget* page) {
     }
     if (pages_->currentWidget() == page) return;
 
-    pages_->setCurrentWidget(page);
-    if (!animationsEnabled_) return;
+    if (!animationsEnabled_) {
+        pages_->setCurrentWidget(page);
+        return;
+    }
 
     auto* effect = new QGraphicsOpacityEffect(page);
     effect->setOpacity(0.0);
     page->setGraphicsEffect(effect);
+    pages_->setCurrentWidget(page);
     auto* animation = new QPropertyAnimation(effect, "opacity", this);
     animation->setDuration(155);
     animation->setStartValue(0.0);
