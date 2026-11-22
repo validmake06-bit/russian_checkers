@@ -286,6 +286,26 @@ bool Database::getUserStatistics(qint64 userId, UserStatistics* statistics, QStr
         ? qBound(0, qRound(100.0 * double(statistics->wins) / double(completedGames)), 100)
         : 0;
     statistics->averageGameSeconds = completedGames > 0 ? completedSeconds / completedGames : 0;
+
+    // Count all recorded games, including unfinished ones, so this reflects
+    // the difficulty the player actually selects most often.
+    QSqlQuery difficultyQuery(db_);
+    difficultyQuery.prepare(QStringLiteral(
+        "SELECT difficulty, COUNT(*) AS games_count FROM games "
+        "WHERE user_id=? GROUP BY difficulty "
+        "ORDER BY games_count DESC, difficulty DESC LIMIT 1"));
+    difficultyQuery.addBindValue(userId);
+    if (!difficultyQuery.exec()) {
+        if (error) *error = difficultyQuery.lastError().text();
+        return false;
+    }
+    if (difficultyQuery.next()) {
+        statistics->mostPlayedDifficulty = difficultyQuery.value(0).toInt();
+        statistics->mostPlayedDifficultyGames = difficultyQuery.value(1).toLongLong();
+    } else {
+        statistics->mostPlayedDifficulty = 0;
+        statistics->mostPlayedDifficultyGames = 0;
+    }
     return true;
 }
 
